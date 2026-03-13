@@ -11,7 +11,7 @@ WORKDIR /build
 
 RUN cargo build --profile release-lto -p g3proxy \
     --no-default-features \
-    --features vendored-openssl,vendored-c-ares
+    --features vendored-openssl,vendored-c-ares,rustls-ring
 
 # Stage 2: Runtime
 FROM debian:bookworm-slim
