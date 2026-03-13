@@ -1,0 +1,40 @@
+runtime:
+  thread_number: 2
+
+log:
+  default:
+    format: text
+
+resolver:
+  - name: default
+    type: c-ares
+
+escaper:
+  - name: residential-pool
+    type: proxy_float
+    source: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0?sets_key=pool:residential"
+    cache: /var/cache/g3proxy/residential.json
+    refresh_interval: 1s
+    expire_guard_duration: 10s
+
+  - name: direct
+    type: direct_fixed
+    resolver: default
+
+  - name: failover
+    type: route_failover
+    primary_next: residential-pool
+    standby_next: direct
+
+server:
+  - name: socks-in
+    type: socks_proxy
+    escaper: failover
+    listen:
+      address: "${TAILSCALE_IP}:1080"
+
+  - name: http-in
+    type: http_proxy
+    escaper: failover
+    listen:
+      address: "${TAILSCALE_IP}:8080"
