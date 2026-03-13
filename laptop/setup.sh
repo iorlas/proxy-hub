@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== Proxy Hub — Laptop Setup ==="
 echo "Deploys microsocks as a SOCKS5 proxy on port 1080"
 echo "No authentication (Tailscale-only access)"
@@ -21,12 +23,16 @@ if docker ps -a --format '{{.Names}}' | grep -q '^microsocks$'; then
     docker rm microsocks 2>/dev/null || true
 fi
 
-# Run microsocks
+# Build locally (multi-arch, no pre-built image dependency)
+echo "Building microsocks image..."
+docker build -t microsocks:local "$SCRIPT_DIR"
+
+# Run microsocks (use -p for macOS/Docker Desktop compatibility)
 docker run -d \
     --restart=unless-stopped \
     --name microsocks \
-    --network host \
-    rofl0r/microsocks -p 1080
+    -p 1080:1080 \
+    microsocks:local
 
 echo ""
 echo "microsocks started on port 1080"
