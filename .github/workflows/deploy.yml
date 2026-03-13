@@ -70,13 +70,13 @@ jobs:
 
           # Update env vars
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
-            -H "Authorization: Bearer ${DOKPLOY_TOKEN}" \
+            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"composeId\": \"${COMPOSE_ID}\", \"env\": $(echo "$ENV_STRING" | jq -Rs .)}"
 
           # Trigger redeploy
-          curl -sf -X POST "${DOKPLOY_URL}/api/deployment.redeploy" \
-            -H "Authorization: Bearer ${DOKPLOY_TOKEN}" \
+          curl -sf -X POST "${DOKPLOY_URL}/api/compose.redeploy" \
+            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"composeId\": \"${COMPOSE_ID}\"}"
 
