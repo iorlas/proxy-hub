@@ -1,0 +1,35 @@
+services:
+  g3proxy:
+    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-g3proxy:${IMAGE_TAG:-latest}
+    network_mode: host
+    environment:
+      - TAILSCALE_IP=${TAILSCALE_IP}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - g3proxy-cache:/var/cache/g3proxy
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD} --bind 127.0.0.1
+    network_mode: host
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  health-checker:
+    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-health:${IMAGE_TAG:-latest}
+    network_mode: host
+    environment:
+      - ZEP_FQDN=${ZEP_FQDN}
+      - MAC_FQDN=${MAC_FQDN}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:
+  g3proxy-cache:
