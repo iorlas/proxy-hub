@@ -7,7 +7,7 @@ services:
     environment:
       - TAILSCALE_IP=${TAILSCALE_IP}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_HOST=redis
     volumes:
       - g3proxy-cache:/var/cache/g3proxy
     restart: unless-stopped
@@ -30,7 +30,7 @@ services:
       - ZEP_FQDN=${ZEP_FQDN}
       - MAC_FQDN=${MAC_FQDN}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_HOST=redis
     restart: unless-stopped
     depends_on:
       - redis
