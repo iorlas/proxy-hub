@@ -66,6 +66,7 @@ jobs:
           ENV_STRING="IMAGE_TAG=${IMAGE_TAG}
           TAILSCALE_IP=${TAILSCALE_IP}
           REDIS_PASSWORD=${REDIS_PASSWORD}
+          REDIS_HOST=redis
           ZEP_FQDN=${ZEP_FQDN}
           MAC_FQDN=${MAC_FQDN}
           GITHUB_OWNER=${GITHUB_OWNER}"
