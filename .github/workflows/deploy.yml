@@ -70,11 +70,17 @@ jobs:
           MAC_FQDN=${MAC_FQDN}
           GITHUB_OWNER=${GITHUB_OWNER}"
 
-          # Update compose file + env vars
+          # Update env vars
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
             -H "X-API-Key: ${DOKPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${COMPOSE_ID}\", \"env\": $(echo "$ENV_STRING" | jq -Rs .), \"dockerCompose\": $(cat docker-compose.prod.yml | jq -Rs .)}"
+            -d "{\"composeId\": \"${COMPOSE_ID}\", \"env\": $(echo "$ENV_STRING" | jq -Rs .)}"
+
+          # Update compose file
+          curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
+            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"composeId\": \"${COMPOSE_ID}\", \"dockerCompose\": $(cat docker-compose.prod.yml | jq -Rs .)}"
 
           # Trigger redeploy
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.redeploy" \
