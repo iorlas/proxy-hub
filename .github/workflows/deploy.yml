@@ -8,6 +8,7 @@ env:
   REGISTRY: ghcr.io
   G3PROXY_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-g3proxy
   HEALTH_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-health
+  SCANNER_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-scanner
 
 jobs:
   build-and-deploy:
@@ -50,6 +51,15 @@ jobs:
           cache-from: type=gha,scope=health
           cache-to: type=gha,mode=max,scope=health
           tags: ${{ env.HEALTH_IMAGE }}:${{ steps.tag.outputs.tag }}
+
+      - name: Build and push proxy-scanner
+        uses: docker/build-push-action@v6
+        with:
+          context: ./proxy-scanner
+          push: true
+          cache-from: type=gha,scope=scanner
+          cache-to: type=gha,mode=max,scope=scanner
+          tags: ${{ env.SCANNER_IMAGE }}:${{ steps.tag.outputs.tag }}
 
       - name: Deploy to Dokploy
         env:

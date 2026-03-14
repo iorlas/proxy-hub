@@ -28,6 +28,18 @@ services:
     depends_on:
       - redis
 
+  proxy-scanner:
+    build:
+      context: ./proxy-scanner
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - scanner-data:/data
+    depends_on:
+      - redis
+
 volumes:
   redis-data:
   g3proxy-cache:
+  scanner-data:
