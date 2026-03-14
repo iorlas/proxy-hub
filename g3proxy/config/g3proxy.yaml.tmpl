@@ -15,7 +15,6 @@ escaper:
   - name: residential-pool
     type: proxy_float
     source: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0?sets_key=proxy_pool"
-    resolver: default
     cache: /var/cache/g3proxy/residential.json
     refresh_interval: 1s
     expire_guard_duration: 10s
