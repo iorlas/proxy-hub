@@ -8,4 +8,4 @@ echo "g3proxy config rendered:"
 cat /etc/g3proxy/g3proxy.yaml
 
 # Replace shell with g3proxy for proper signal handling
-exec g3proxy -c /etc/g3proxy/g3proxy.yaml -Vvv
+exec g3proxy -c /etc/g3proxy/g3proxy.yaml -vvv
