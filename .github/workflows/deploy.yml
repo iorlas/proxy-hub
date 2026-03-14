@@ -80,7 +80,7 @@ jobs:
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
             -H "X-API-Key: ${DOKPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${COMPOSE_ID}\", \"dockerCompose\": $(cat docker-compose.prod.yml | jq -Rs .)}"
+            -d "{\"composeId\": \"${COMPOSE_ID}\", \"composeFile\": $(cat docker-compose.prod.yml | jq -Rs .)}"
 
           # Trigger redeploy
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.redeploy" \
