@@ -19,24 +19,15 @@ escaper:
     refresh_interval: 5s
     expire_guard_duration: 10s
 
-  - name: direct
-    type: direct_fixed
-    resolver: default
-
-  - name: failover
-    type: route_failover
-    primary_next: residential-pool
-    standby_next: direct
-
 server:
   - name: socks-in
     type: socks_proxy
-    escaper: failover
+    escaper: residential-pool
     listen:
       address: "${TAILSCALE_IP}:1080"
 
   - name: http-in
     type: http_proxy
-    escaper: failover
+    escaper: residential-pool
     listen:
       address: "${TAILSCALE_IP}:8080"
