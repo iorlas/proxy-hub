@@ -13,11 +13,8 @@ resolver:
 
 escaper:
   - name: residential-pool
-    type: proxy_float
-    source: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0?sets_key=proxy_pool"
-    cache: /var/cache/g3proxy/residential.json
-    refresh_interval: 1s
-    expire_guard_duration: 10s
+    type: proxy_socks5
+    proxy_addr: 100.91.84.2:1080
 
   - name: direct
     type: direct_fixed
@@ -27,6 +24,7 @@ escaper:
     type: route_failover
     primary_next: residential-pool
     standby_next: direct
+    primary_pick_policy: random
 
 server:
   - name: socks-in
