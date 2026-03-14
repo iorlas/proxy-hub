@@ -31,12 +31,12 @@ escaper:
 server:
   - name: socks-in
     type: socks_proxy
-    escaper: residential-pool
+    escaper: failover
     listen:
       address: "${TAILSCALE_IP}:1080"
 
   - name: http-in
     type: http_proxy
-    escaper: residential-pool
+    escaper: failover
     listen:
       address: "${TAILSCALE_IP}:8080"
