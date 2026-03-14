@@ -157,6 +157,140 @@ volumes:
 
 CI workflow: add build step for `proxy-scanner` image (same pattern as health-checker).
 
+## Quality Assurance
+
+Inherited from aggre project conventions, adapted for a service with no database or HTTP API.
+
+### Toolchain
+
+| Tool | Purpose | Config |
+|---|---|---|
+| Ruff | Linter + formatter | `pyproject.toml` |
+| Ty | Static type checking | `pyproject.toml` |
+| pytest | Test framework | `pyproject.toml` |
+| pytest-cov | Coverage reporting | `pyproject.toml`, `--cov-fail-under=95` |
+| diff-cover | Coverage of changed lines | Makefile, `--fail-under=95` |
+| pre-commit | Hook chain: format → lint → type check | `.pre-commit-config.yaml` |
+| aioresponses | Async HTTP mocking for aiohttp | dev dependency |
+
+### Ruff Config
+
+```toml
+[tool.ruff]
+target-version = "py313"
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+```
+
+### Ty Config
+
+```toml
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
+invalid-argument-type = "error"
+missing-argument = "error"
+unsupported-operator = "error"
+division-by-zero = "error"
+unused-ignore-comment = "warn"
+redundant-cast = "warn"
+```
+
+### Test Markers
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers --cov --cov-report=term:skip-covered --cov-report=xml --cov-fail-under=95"
+markers = [
+    "unit: pure logic, no I/O",
+    "integration: requires Redis or mocked HTTP",
+]
+```
+
+### Coverage
+
+```toml
+[tool.coverage.run]
+source = ["proxy_scanner"]
+branch = true
+omit = ["proxy_scanner/main.py"]
+
+[tool.coverage.report]
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py          — Redis fixture (fakeredis), aioresponses fixture
+├── test_source_fetcher.py  — mock HTTP responses for each source
+├── test_validators.py      — mock proxy responses, test 3-stage pipeline
+├── test_pool_manager.py    — Redis read/write with fakeredis
+└── test_stats.py           — stats formatting and file append
+```
+
+- **Unit tests**: validation logic, dedup, stats formatting, expiry calculation
+- **Integration tests**: full cycle with mocked HTTP + fakeredis (no real proxies or Redis needed)
+- Redis mocked via `fakeredis[aioredis]` — no test-compose needed
+
+### Pre-commit Hooks
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: bash -c 'uv run ruff format .'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check
+        entry: bash -c 'uv run ruff check --fix .'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ty
+        name: ty type check
+        entry: bash -c 'uvx ty check .'
+        language: system
+        types: [python]
+        pass_filenames: false
+```
+
+### Makefile
+
+```makefile
+test:
+	uv run pytest tests/
+
+lint:
+	uv run ruff check proxy_scanner tests
+	uv run ruff format --check proxy_scanner tests
+	uvx ty check proxy_scanner tests
+
+coverage-diff:
+	uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=95
+```
+
+### TDD Workflow
+
+Red-green-refactor: write failing test → make it pass → clean up. Every module gets tests before implementation. Coverage gate at 95% prevents shipping untested code.
+
 ## Out of Scope
 
 - **g3proxy failover routing** — scanner populates `proxy_pool:free` but g3proxy doesn't consume it yet. Follow-up task to add `route_failover` chain: free pool -> laptop pool.
