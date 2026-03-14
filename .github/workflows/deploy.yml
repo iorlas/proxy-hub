@@ -30,11 +30,16 @@ jobs:
         id: tag
         run: echo "tag=main-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push g3proxy
         uses: docker/build-push-action@v6
         with:
           context: ./g3proxy
           push: true
+          cache-from: type=gha,scope=g3proxy
+          cache-to: type=gha,mode=max,scope=g3proxy
           tags: |
             ${{ env.G3PROXY_IMAGE }}:${{ steps.tag.outputs.tag }}
             ${{ env.G3PROXY_IMAGE }}:latest
@@ -44,6 +49,8 @@ jobs:
         with:
           context: ./health-checker
           push: true
+          cache-from: type=gha,scope=health
+          cache-to: type=gha,mode=max,scope=health
           tags: |
             ${{ env.HEALTH_IMAGE }}:${{ steps.tag.outputs.tag }}
             ${{ env.HEALTH_IMAGE }}:latest
