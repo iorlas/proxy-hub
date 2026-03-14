@@ -18,8 +18,7 @@ while true; do
     host=$(echo "$backend" | cut -d: -f1)
     port=$(echo "$backend" | cut -d: -f2)
     if nc -z -w3 "$host" "$port" 2>/dev/null; then
-      expire=$(date -u -d "+${EXPIRE_SECONDS} seconds" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || \
-               date -u -v "+${EXPIRE_SECONDS}S" +%Y-%m-%dT%H:%M:%SZ)
+      expire=$(date -u -d "@$(($(date +%s) + EXPIRE_SECONDS))" +%Y-%m-%dT%H:%M:%SZ)
       redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" --no-auth-warning \
         SADD "$POOL_KEY" "{\"type\":\"socks5\",\"addr\":\"${backend}\",\"expire\":\"${expire}\"}" \
         > /dev/null
