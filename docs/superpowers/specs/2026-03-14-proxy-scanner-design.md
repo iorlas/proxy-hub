@@ -67,7 +67,7 @@ If a source fetch fails, log a warning and continue with remaining sources. If a
 
 1. Fetch all sources, dedup by `address:protocol` (same IP on HTTP and SOCKS5 = two separate entries)
 2. Copy still-valid proxies from current `proxy_pool:free` into the working set (these skip the pipeline)
-3. Run 3-stage pipeline on new candidates (not already in the working set)
+3. Run 2-stage pipeline on new candidates (not already in the working set)
 4. Add pipeline survivors to the working set
 5. Atomic swap: write working set to `proxy_pool:free:tmp`, then `RENAME` to `proxy_pool:free`
 6. Log one-line stats summary to Docker logs and stats file
