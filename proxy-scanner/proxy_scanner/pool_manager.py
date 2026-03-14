@@ -24,7 +24,7 @@ def build_proxy_entry(proxy: Proxy, expire_seconds: int = DEFAULT_EXPIRE_SECONDS
     return json.dumps(
         {
             "type": proxy.protocol,
-            "addr": proxy.addr,
+            "addr": proxy.addr.split("://", 1)[-1] if "://" in proxy.addr else proxy.addr,
             "expire": expire_ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     )

@@ -24,6 +24,15 @@ def test_build_proxy_entry_format():
     assert "T" in parsed["expire"]
 
 
+@pytest.mark.unit
+def test_build_proxy_entry_strips_protocol_prefix():
+    """Proxies with socks5:// prefix in addr should have it stripped for g3proxy."""
+    proxy = Proxy(addr="socks5://1.2.3.4:1080", source="test", protocol="socks5")
+    entry = build_proxy_entry(proxy, expire_seconds=3600)
+    parsed = json.loads(entry)
+    assert parsed["addr"] == "1.2.3.4:1080"  # bare ip:port, no prefix
+
+
 @pytest.mark.integration
 async def test_get_retained_proxies_returns_valid(redis_client):
     future_expire = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 3600))
