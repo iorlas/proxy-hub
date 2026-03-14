@@ -4,8 +4,8 @@ import time
 import pytest
 
 from proxy_scanner.pool_manager import (
-    POOL_KEY,
-    POOL_TMP_KEY,
+    POOL_KEY_FAST,
+    POOL_KEY_SLOW,
     build_proxy_entry,
     get_retained_proxies,
     update_pool,
@@ -37,8 +37,8 @@ def test_build_proxy_entry_strips_protocol_prefix():
 async def test_get_retained_proxies_returns_valid(redis_client):
     future_expire = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 3600))
     entry = json.dumps({"type": "socks5", "addr": "1.2.3.4:8080", "expire": future_expire})
-    await redis_client.sadd(POOL_KEY, entry)
-    retained = await get_retained_proxies(redis_client)
+    await redis_client.sadd(POOL_KEY_FAST, entry)
+    retained = await get_retained_proxies(redis_client, POOL_KEY_FAST)
     assert len(retained) == 1
     assert retained[0] == entry
 
@@ -47,22 +47,30 @@ async def test_get_retained_proxies_returns_valid(redis_client):
 async def test_get_retained_proxies_skips_expired(redis_client):
     past_expire = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 60))
     entry = json.dumps({"type": "socks5", "addr": "1.2.3.4:8080", "expire": past_expire})
-    await redis_client.sadd(POOL_KEY, entry)
-    retained = await get_retained_proxies(redis_client)
+    await redis_client.sadd(POOL_KEY_FAST, entry)
+    retained = await get_retained_proxies(redis_client, POOL_KEY_FAST)
     assert len(retained) == 0
 
 
 @pytest.mark.integration
 async def test_update_pool_atomic_swap(redis_client):
     entries = ['{"type":"socks5","addr":"1.2.3.4:8080","expire":"2099-01-01T00:00:00Z"}']
-    await update_pool(redis_client, entries)
-    members = await redis_client.smembers(POOL_KEY)
+    await update_pool(redis_client, entries, POOL_KEY_FAST)
+    members = await redis_client.smembers(POOL_KEY_FAST)
     assert len(members) == 1
-    assert not await redis_client.exists(POOL_TMP_KEY)
+    assert not await redis_client.exists(f"{POOL_KEY_FAST}:tmp")
 
 
 @pytest.mark.integration
 async def test_update_pool_empty_deletes_key(redis_client):
-    await redis_client.sadd(POOL_KEY, "old_entry")
-    await update_pool(redis_client, [])
-    assert not await redis_client.exists(POOL_KEY)
+    await redis_client.sadd(POOL_KEY_FAST, "old_entry")
+    await update_pool(redis_client, [], POOL_KEY_FAST)
+    assert not await redis_client.exists(POOL_KEY_FAST)
+
+
+@pytest.mark.integration
+async def test_update_pool_slow_key(redis_client):
+    entries = ['{"type":"http","addr":"5.6.7.8:3128","expire":"2099-01-01T00:00:00Z"}']
+    await update_pool(redis_client, entries, POOL_KEY_SLOW)
+    members = await redis_client.smembers(POOL_KEY_SLOW)
+    assert len(members) == 1

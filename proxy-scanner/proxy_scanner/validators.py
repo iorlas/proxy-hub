@@ -110,3 +110,27 @@ async def check_youtube(proxy: Proxy) -> bool:
         return found >= 2
     except Exception:
         return False
+
+
+BANDWIDTH_URL = "https://speed.cloudflare.com/__down?bytes=2000000"
+BANDWIDTH_TIMEOUT = aiohttp.ClientTimeout(connect=10, total=45)
+FAST_THRESHOLD_KBS = 1024  # 1 MB/s
+
+
+async def check_bandwidth(proxy: Proxy) -> int:
+    """Stage 3: download 2MB test file, return speed in KB/s. Returns 0 on failure."""
+    try:
+        session, proxy_arg = await _make_session(proxy, BANDWIDTH_TIMEOUT)
+        async with session:
+            kwargs: dict = {}
+            if proxy_arg:
+                kwargs["proxy"] = proxy_arg
+            start = time.monotonic()
+            async with session.get(BANDWIDTH_URL, **kwargs) as resp:
+                data = await resp.read()
+            elapsed = time.monotonic() - start
+            if len(data) < 1_000_000:  # incomplete download
+                return 0
+            return max(1, int(len(data) / elapsed / 1024))
+    except Exception:
+        return 0

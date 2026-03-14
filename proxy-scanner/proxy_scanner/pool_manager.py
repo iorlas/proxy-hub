@@ -13,8 +13,8 @@ from proxy_scanner.source_fetcher import Proxy
 
 log = logging.getLogger(__name__)
 
-POOL_KEY = "proxy_pool:free"
-POOL_TMP_KEY = "proxy_pool:free:tmp"
+POOL_KEY_FAST = "proxy_pool:free:fast"
+POOL_KEY_SLOW = "proxy_pool:free:slow"
 DEFAULT_EXPIRE_SECONDS = 3600  # 60 minutes
 
 
@@ -30,9 +30,9 @@ def build_proxy_entry(proxy: Proxy, expire_seconds: int = DEFAULT_EXPIRE_SECONDS
     )
 
 
-async def get_retained_proxies(r: Redis) -> list[str]:
-    """Get proxies from the current pool that haven't expired yet."""
-    members = await r.smembers(POOL_KEY)  # type: ignore[invalid-await]
+async def get_retained_proxies(r: Redis, pool_key: str) -> list[str]:
+    """Get proxies from a pool that haven't expired yet."""
+    members = await r.smembers(pool_key)  # type: ignore[invalid-await]
     now = time.time()
     retained = []
     for entry_str in members:
@@ -47,12 +47,12 @@ async def get_retained_proxies(r: Redis) -> list[str]:
     return retained
 
 
-async def update_pool(r: Redis, entries: list[str]) -> None:
-    """Atomically replace the pool with new entries."""
+async def update_pool(r: Redis, entries: list[str], pool_key: str) -> None:
+    """Atomically replace a pool with new entries."""
+    tmp_key = f"{pool_key}:tmp"
     if not entries:
-        await r.delete(POOL_KEY)
+        await r.delete(pool_key)
         return
-
-    await r.delete(POOL_TMP_KEY)
-    await r.sadd(POOL_TMP_KEY, *entries)  # type: ignore[invalid-await]
-    await r.rename(POOL_TMP_KEY, POOL_KEY)
+    await r.delete(tmp_key)
+    await r.sadd(tmp_key, *entries)  # type: ignore[invalid-await]
+    await r.rename(tmp_key, pool_key)

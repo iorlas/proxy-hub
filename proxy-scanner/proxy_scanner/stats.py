@@ -21,6 +21,8 @@ class CycleStats:
     youtube_ok: int
     pool_size: int
     sources: dict[str, int] = field(default_factory=dict)
+    fast_count: int = 0
+    slow_count: int = 0
 
 
 def format_stats_line(stats: CycleStats) -> str:
@@ -35,6 +37,8 @@ def format_stats_line(stats: CycleStats) -> str:
             "transparent_rejected": stats.transparent_rejected,
             "youtube_ok": stats.youtube_ok,
             "pool_size": stats.pool_size,
+            "fast": stats.fast_count,
+            "slow": stats.slow_count,
             "sources": stats.sources,
         }
     )

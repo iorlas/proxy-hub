@@ -2,7 +2,14 @@ import pytest
 from aioresponses import aioresponses
 
 from proxy_scanner.source_fetcher import Proxy
-from proxy_scanner.validators import HTTPBIN_URL, YOUTUBE_URL, check_alive_and_anonymity, check_youtube
+from proxy_scanner.validators import (
+    BANDWIDTH_URL,
+    HTTPBIN_URL,
+    YOUTUBE_URL,
+    check_alive_and_anonymity,
+    check_bandwidth,
+    check_youtube,
+)
 
 
 @pytest.mark.unit
@@ -92,3 +99,31 @@ async def test_youtube_fail_timeout():
         m.get(YOUTUBE_URL, exception=TimeoutError("test"))
         result = await check_youtube(proxy)
     assert result is False
+
+
+@pytest.mark.unit
+async def test_bandwidth_fast_proxy():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    data = b"x" * 2_000_000
+    with aioresponses() as m:
+        m.get(BANDWIDTH_URL, body=data)
+        speed = await check_bandwidth(proxy)
+    assert speed > 0
+
+
+@pytest.mark.unit
+async def test_bandwidth_timeout():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        m.get(BANDWIDTH_URL, exception=TimeoutError("test"))
+        speed = await check_bandwidth(proxy)
+    assert speed == 0
+
+
+@pytest.mark.unit
+async def test_bandwidth_incomplete():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        m.get(BANDWIDTH_URL, body=b"x" * 100)  # too small
+        speed = await check_bandwidth(proxy)
+    assert speed == 0
