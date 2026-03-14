@@ -42,5 +42,8 @@ while true; do
   $RCLI RENAME "$TEMP_KEY" "$POOL_KEY" > /dev/null 2>&1 || \
     $RCLI DEL "$POOL_KEY" > /dev/null 2>&1  # no backends up → clear pool
 
+  # Debug: show what's in Redis
+  echo "[$(date -u +%H:%M:%S)] Pool contents: $($RCLI SMEMBERS "$POOL_KEY" 2>/dev/null)"
+
   sleep "$INTERVAL"
 done
