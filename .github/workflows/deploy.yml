@@ -1,28 +1,71 @@
-name: Deploy
+name: Build and Deploy
 
 on:
   push:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  G3PROXY_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-g3proxy
+  HEALTH_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-health
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Trigger Dokploy redeploy
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: tag
+        run: echo "tag=main-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push g3proxy
+        uses: docker/build-push-action@v6
+        with:
+          context: ./g3proxy
+          push: true
+          tags: |
+            ${{ env.G3PROXY_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.G3PROXY_IMAGE }}:latest
+
+      - name: Build and push health-checker
+        uses: docker/build-push-action@v6
+        with:
+          context: ./health-checker
+          push: true
+          tags: |
+            ${{ env.HEALTH_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.HEALTH_IMAGE }}:latest
+
+      - name: Deploy to Dokploy
         env:
           DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_AUTH_TOKEN }}
           COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           TAILSCALE_IP: ${{ secrets.TAILSCALE_IP }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           ZEP_FQDN: ${{ secrets.ZEP_FQDN }}
           MAC_FQDN: ${{ secrets.MAC_FQDN }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
         run: |
-          ENV_STRING="TAILSCALE_IP=${TAILSCALE_IP}
+          ENV_STRING="IMAGE_TAG=${IMAGE_TAG}
+          TAILSCALE_IP=${TAILSCALE_IP}
           REDIS_PASSWORD=${REDIS_PASSWORD}
           ZEP_FQDN=${ZEP_FQDN}
-          MAC_FQDN=${MAC_FQDN}"
+          MAC_FQDN=${MAC_FQDN}
+          GITHUB_OWNER=${GITHUB_OWNER}"
 
           # Update env vars
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
@@ -30,10 +73,10 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"composeId\": \"${COMPOSE_ID}\", \"env\": $(echo "$ENV_STRING" | jq -Rs .)}"
 
-          # Trigger redeploy (Dokploy clones repo and builds on server)
+          # Trigger redeploy
           curl -sf -X POST "${DOKPLOY_URL}/api/compose.redeploy" \
             -H "X-API-Key: ${DOKPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"composeId\": \"${COMPOSE_ID}\"}"
 
-          echo "Deploy triggered"
+          echo "Deploy triggered with IMAGE_TAG=${IMAGE_TAG}"
