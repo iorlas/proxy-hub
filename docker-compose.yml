@@ -8,6 +8,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis
     volumes:
       - g3proxy-cache:/var/cache/g3proxy
     depends_on:

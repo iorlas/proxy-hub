@@ -8,13 +8,14 @@ resolver:
   - name: default
     type: c-ares
     server:
+      - 127.0.0.11
       - 1.1.1.1
       - 8.8.8.8
 
 escaper:
   - name: residential-pool
     type: proxy_float
-    source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool"
+    source: "redis://:${REDIS_PASSWORD}@${REDIS_HOST}:6379/0?sets_key=proxy_pool"
     cache: /var/cache/g3proxy/peers.json
     refresh_interval: 5s
     expire_guard_duration: 10s
