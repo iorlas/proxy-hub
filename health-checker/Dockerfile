@@ -1,8 +1,8 @@
-FROM alpine:3.21
+FROM python:3.13-alpine
 
-RUN apk add --no-cache redis netcat-openbsd
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY health-check.sh /usr/local/bin/health-check.sh
-RUN chmod +x /usr/local/bin/health-check.sh
+COPY health_check.py /usr/local/bin/health_check.py
 
-CMD ["/usr/local/bin/health-check.sh"]
+CMD ["python", "/usr/local/bin/health_check.py"]

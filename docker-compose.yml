@@ -3,7 +3,9 @@ services:
     build:
       context: ./g3proxy
       dockerfile: Dockerfile
-    network_mode: host
+    ports:
+      - "1080:1080"
+      - "8080:8080"
     env_file:
       - .env
     volumes:
@@ -13,8 +15,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD:-devpass} --bind 127.0.0.1
-    network_mode: host
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devpass} --bind 0.0.0.0
     volumes:
       - redis-data:/data
 
@@ -22,9 +23,10 @@ services:
     build:
       context: ./health-checker
       dockerfile: Dockerfile
-    network_mode: host
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis
     depends_on:
       - redis
 

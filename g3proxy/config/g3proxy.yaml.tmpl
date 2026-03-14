@@ -14,7 +14,7 @@ resolver:
 escaper:
   - name: residential-pool
     type: proxy_float
-    source: "redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0?sets_key=proxy_pool"
+    source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool"
     cache: /var/cache/g3proxy/peers.json
     refresh_interval: 5s
     expire_guard_duration: 10s
@@ -24,10 +24,10 @@ server:
     type: socks_proxy
     escaper: residential-pool
     listen:
-      address: "${TAILSCALE_IP}:1080"
+      address: "0.0.0.0:1080"
 
   - name: http-in
     type: http_proxy
     escaper: residential-pool
     listen:
-      address: "${TAILSCALE_IP}:8080"
+      address: "0.0.0.0:8080"
