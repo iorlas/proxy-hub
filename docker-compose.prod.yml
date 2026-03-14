@@ -1,6 +1,6 @@
 services:
   g3proxy:
-    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-g3proxy:${IMAGE_TAG:-latest}
+    build: ./g3proxy
     network_mode: host
     environment:
       - TAILSCALE_IP=${TAILSCALE_IP}
@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   health-checker:
-    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-health:${IMAGE_TAG:-latest}
+    build: ./health-checker
     network_mode: host
     environment:
       - ZEP_FQDN=${ZEP_FQDN}
