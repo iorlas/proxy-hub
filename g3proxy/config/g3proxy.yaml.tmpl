@@ -12,15 +12,23 @@ resolver:
       - 8.8.8.8
 
 escaper:
-  # Free proxies from scanner (proxy_pool:free)
-  - name: free-pool
+  # Fast free proxies (>= 1 MB/s bandwidth)
+  - name: fast-free-pool
     type: proxy_float
-    source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool:free"
-    cache: /var/cache/g3proxy/free-peers.json
+    source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool:free:fast"
+    cache: /var/cache/g3proxy/fast-free-peers.json
     refresh_interval: 5s
     expire_guard_duration: 10s
 
-  # Laptop proxies from health-checker (proxy_pool)
+  # Slow free proxies (< 1 MB/s but YouTube-validated)
+  - name: slow-free-pool
+    type: proxy_float
+    source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool:free:slow"
+    cache: /var/cache/g3proxy/slow-free-peers.json
+    refresh_interval: 5s
+    expire_guard_duration: 10s
+
+  # Laptop proxies from health-checker
   - name: laptop-pool
     type: proxy_float
     source: "redis://:${REDIS_PASSWORD}@redis:6379/0?sets_key=proxy_pool"
@@ -28,11 +36,18 @@ escaper:
     refresh_interval: 5s
     expire_guard_duration: 10s
 
-  # Failover: try free proxies first, fall back to laptops
+  # Tier 2 failover: slow free → laptops
+  - name: fallback-chain
+    type: route_failover
+    primary_next: slow-free-pool
+    standby_next: laptop-pool
+    fallback_delay: 5s
+
+  # Tier 1 failover: fast free → (slow free → laptops)
   - name: failover
     type: route_failover
-    primary_next: free-pool
-    standby_next: laptop-pool
+    primary_next: fast-free-pool
+    standby_next: fallback-chain
     fallback_delay: 5s
 
 server:
