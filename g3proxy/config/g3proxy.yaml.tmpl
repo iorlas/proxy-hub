@@ -36,29 +36,50 @@ escaper:
     refresh_interval: 5s
     expire_guard_duration: 10s
 
-  # Tier 2 failover: slow free → laptops
+  # Free-only failover: fast → slow (NO laptop fallback)
+  - name: free-only
+    type: route_failover
+    primary_next: fast-free-pool
+    standby_next: slow-free-pool
+    fallback_delay: 3500ms
+
+  # Full failover: slow free → laptops
   - name: fallback-chain
     type: route_failover
     primary_next: slow-free-pool
     standby_next: laptop-pool
-    fallback_delay: 5s
+    fallback_delay: 3500ms
 
-  # Tier 1 failover: fast free → (slow free → laptops)
-  - name: failover
+  # Full failover: fast free → (slow free → laptops)
+  - name: failover-full
     type: route_failover
     primary_next: fast-free-pool
     standby_next: fallback-chain
-    fallback_delay: 5s
+    fallback_delay: 3500ms
 
 server:
+  # Port 1080/8080: full failover (free → laptops)
   - name: socks-in
     type: socks_proxy
-    escaper: failover
+    escaper: failover-full
     listen:
       address: "0.0.0.0:1080"
 
   - name: http-in
     type: http_proxy
-    escaper: failover
+    escaper: failover-full
     listen:
       address: "0.0.0.0:8080"
+
+  # Port 1081/8081: free proxies only (NO laptop fallback)
+  - name: socks-free-only
+    type: socks_proxy
+    escaper: free-only
+    listen:
+      address: "0.0.0.0:1081"
+
+  - name: http-free-only
+    type: http_proxy
+    escaper: free-only
+    listen:
+      address: "0.0.0.0:8081"
