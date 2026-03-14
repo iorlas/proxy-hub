@@ -6,7 +6,7 @@ EXPIRE_SECONDS="${EXPIRE_SECONDS:-120}"
 INTERVAL="${INTERVAL:-30}"
 REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-POOL_KEY="${POOL_KEY:-pool:residential}"
+POOL_KEY="${POOL_KEY:-proxy_pool}"
 
 echo "Health checker starting"
 echo "  Backends: $BACKENDS"
