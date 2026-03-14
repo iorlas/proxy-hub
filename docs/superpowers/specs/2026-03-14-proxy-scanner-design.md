@@ -21,7 +21,7 @@ New `proxy-scanner` container in the proxy-hub compose stack. Runs alongside the
 ```
 proxy-scanner
 ├── source_fetcher.py    — fetch + dedup proxy lists
-├── validators.py        — 3-stage validation pipeline
+├── validators.py        — 2-stage validation pipeline
 ├── pool_manager.py      — Redis pool writes + expiry
 ├── stats.py             — cycle stats logging
 └── main.py              — orchestrator + cycle loop
@@ -29,24 +29,20 @@ proxy-scanner
 
 ## Validation Pipeline
 
-Three stages, each progressively more expensive. Each stage only processes survivors from the previous one.
+Two stages. Each stage only processes survivors from the previous one.
 
-### Stage 1: Fast Filter (200 concurrent, 5s timeout)
-- HTTP GET to `https://httpbin.org/ip` *through the proxy* (not raw TCP — proves the proxy actually proxies traffic, not just has an open port)
-- Measure round-trip latency (ms)
-- GeoIP country lookup via local MaxMind GeoLite2 database
-- Output: alive proxies with latency + country metadata
+### Stage 1: Fast Filter + Anonymity (200 concurrent, 8s timeout)
+- HTTP GET to `https://httpbin.org/anything` *through the proxy* — single call provides:
+  - **Alive check**: proves the proxy actually proxies traffic (not just an open port)
+  - **Latency**: measured from request start to response
+  - **Anonymity**: response includes `origin` (exit IP) and `headers` — check if real IP appears in any header value. Reject transparent proxies.
+  - **GeoIP**: country lookup on proxy IP via local MaxMind GeoLite2 database
+- Classify anonymity: elite (no proxy headers, IP hidden) / anonymous (proxy headers but IP hidden) / transparent (real IP leaked — reject)
+- If httpbin.org is unreachable, fall back to raw TCP connect (lose anonymity check but keep alive+latency)
+- Output: alive, non-transparent proxies with latency + country + anonymity level
 - Expected kill rate: ~96%
 
-### Stage 2: Anonymity Check (50 concurrent, 10s timeout)
-- HTTP GET `https://httpbin.org/headers` through proxy
-- Check if real IP appears in any response header
-- Classify: elite / anonymous / transparent
-- Reject transparent proxies
-- If httpbin.org is unreachable, skip this stage and treat all as passed (the real filter is Stage 3)
-- Expected kill rate: ~0% (POC showed all are elite, but this is cheap insurance)
-
-### Stage 3: YouTube Validation (30 concurrent, 20s timeout)
+### Stage 2: YouTube Validation (30 concurrent, 20s timeout)
 - HTTP GET `https://www.youtube.com/watch?v=jNQXAC9IVRw` ("Me at the zoo" — globally available, online since 2005, first YouTube video ever) through proxy
 - Send browser-like User-Agent and Accept-Language headers
 - SOCKS5 proxies use remote DNS resolution (proxy resolves youtube.com, not the scanner)
@@ -88,9 +84,8 @@ During long cycles, log progress at stage boundaries and periodically within sta
 
 ```
 [14:30:00] Cycle starting: 5009 proxies from 8 sources (142 retained from pool)
-[14:30:05] Stage 1 complete: 174/4867 alive
-[14:30:15] Stage 2 complete: 170/174 anonymous+
-[14:32:30] Stage 3 complete: 82/170 YouTube OK
+[14:30:05] Stage 1 complete: 170/4867 alive + non-transparent
+[14:32:30] Stage 2 complete: 82/170 YouTube OK
 [14:32:30] Pool updated: 224 proxies in proxy_pool:free (142 retained + 82 new)
 ```
 
@@ -99,7 +94,7 @@ During long cycles, log progress at stage boundaries and periodically within sta
 Append-only, one line per cycle. JSON format for easy parsing by Claude Code:
 
 ```json
-{"ts":"2026-03-14T14:32:30Z","cycle_s":192,"scraped":5009,"retained":142,"alive":174,"anon_ok":170,"youtube_ok":82,"pool_size":224,"sources":{"proxifly_socks5":57,"monosans_http":6,"proxyscrape_http":6,"thespeedx_http":6,"proxifly_http":7}}
+{"ts":"2026-03-14T14:32:30Z","cycle_s":152,"scraped":5009,"retained":142,"alive_anon":170,"transparent_rejected":4,"youtube_ok":82,"pool_size":224,"sources":{"proxifly_socks5":57,"monosans_http":6,"proxyscrape_http":6,"thespeedx_http":6,"proxifly_http":7}}
 ```
 
 ## Redis
@@ -235,7 +230,7 @@ exclude_lines = [
 tests/
 ├── conftest.py          — Redis fixture (fakeredis), aioresponses fixture
 ├── test_source_fetcher.py  — mock HTTP responses for each source
-├── test_validators.py      — mock proxy responses, test 3-stage pipeline
+├── test_validators.py      — mock proxy responses, test 2-stage pipeline
 ├── test_pool_manager.py    — Redis read/write with fakeredis
 └── test_stats.py           — stats formatting and file append
 ```
