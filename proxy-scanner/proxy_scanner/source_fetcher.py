@@ -46,7 +46,7 @@ async def _fetch_one(session: aiohttp.ClientSession, name: str, url: str) -> lis
                 if addr and ":" in addr:
                     results.append((addr, name, protocol))
             return results
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — any failure from a proxy source is non-fatal
         log.warning("Failed to fetch source %s: %s", name, e)
         return []
 

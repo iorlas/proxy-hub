@@ -16,10 +16,10 @@ g3proxy (SOCKS5+HTTP) → Redis-backed proxy_float (round-robin) → microsocks 
 
 ```bash
 # SOCKS5
-curl --proxy socks5h://shen.shrimp-boa.ts.net:1080 https://api.ipify.org
+curl --proxy socks5h://shen.shrimp-boa.ts.net:2080 https://api.ipify.org
 
 # HTTP
-curl --proxy http://shen.shrimp-boa.ts.net:8080 https://api.ipify.org
+curl --proxy http://shen.shrimp-boa.ts.net:2880 https://api.ipify.org
 ```
 
 ## Local Dev

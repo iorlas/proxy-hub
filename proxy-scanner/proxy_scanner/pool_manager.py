@@ -6,10 +6,12 @@ import json
 import logging
 import time
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from redis.asyncio import Redis
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
-from proxy_scanner.source_fetcher import Proxy
+    from proxy_scanner.source_fetcher import Proxy
 
 log = logging.getLogger(__name__)
 

@@ -29,10 +29,9 @@ REDIS_PORT = 6379
 
 
 async def _get_real_ip() -> str:
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://httpbin.org/ip", timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            data = await resp.json()
-            return data["origin"]
+    async with aiohttp.ClientSession() as session, session.get("https://httpbin.org/ip", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+        data = await resp.json()
+        return data["origin"]
 
 
 async def _run_stage1(proxies: list[Proxy], real_ip: str) -> tuple[list[Proxy], int]:

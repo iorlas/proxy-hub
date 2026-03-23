@@ -6,10 +6,10 @@ How to route traffic through Proxy Hub from other services and scripts.
 
 | Protocol | Endpoint | Use when |
 |---|---|---|
-| SOCKS5 | `socks5h://<TAILSCALE_IP>:1080` | General purpose. DNS resolved by proxy (recommended). |
-| SOCKS5 (local DNS) | `socks5://<TAILSCALE_IP>:1080` | You need DNS resolved locally before proxying. |
-| SOCKS4 | `socks4://<TAILSCALE_IP>:1080` | Legacy clients that only support SOCKS4. |
-| HTTP CONNECT | `http://<TAILSCALE_IP>:8080` | HTTP-aware clients, browser configs, `HTTP_PROXY` env var. |
+| SOCKS5 | `socks5h://<TAILSCALE_IP>:2080` | General purpose. DNS resolved by proxy (recommended). |
+| SOCKS5 (local DNS) | `socks5://<TAILSCALE_IP>:2080` | You need DNS resolved locally before proxying. |
+| SOCKS4 | `socks4://<TAILSCALE_IP>:2080` | Legacy clients that only support SOCKS4. |
+| HTTP CONNECT | `http://<TAILSCALE_IP>:2880` | HTTP-aware clients, browser configs, `HTTP_PROXY` env var. |
 
 **Current Tailscale IP:** see `hosts/shen.md` in Knowledge base, or run `ssh shen "tailscale ip -4"`.
 The IP may change on node re-registration.
@@ -36,25 +36,25 @@ Traffic exits through residential IP addresses (laptops on home networks). The p
 ### Environment variables (most tools, libraries)
 
 ```sh
-export HTTP_PROXY=http://shen.shrimp-boa.ts.net:8080
-export HTTPS_PROXY=http://shen.shrimp-boa.ts.net:8080
+export HTTP_PROXY=http://shen.shrimp-boa.ts.net:2880
+export HTTPS_PROXY=http://shen.shrimp-boa.ts.net:2880
 # or for SOCKS5:
-export ALL_PROXY=socks5h://shen.shrimp-boa.ts.net:1080
+export ALL_PROXY=socks5h://shen.shrimp-boa.ts.net:2080
 ```
 
 ### curl
 
 ```sh
-curl -x socks5h://shen.shrimp-boa.ts.net:1080 https://example.com
-curl -x http://shen.shrimp-boa.ts.net:8080 https://example.com
+curl -x socks5h://shen.shrimp-boa.ts.net:2080 https://example.com
+curl -x http://shen.shrimp-boa.ts.net:2880 https://example.com
 ```
 
 ### Python (requests)
 
 ```python
 proxies = {
-    "http": "socks5h://shen.shrimp-boa.ts.net:1080",
-    "https": "socks5h://shen.shrimp-boa.ts.net:1080",
+    "http": "socks5h://shen.shrimp-boa.ts.net:2080",
+    "https": "socks5h://shen.shrimp-boa.ts.net:2080",
 }
 requests.get("https://example.com", proxies=proxies)
 ```
@@ -63,8 +63,8 @@ Requires `pip install requests[socks]` for SOCKS support. HTTP proxy works witho
 
 ```python
 proxies = {
-    "http": "http://shen.shrimp-boa.ts.net:8080",
-    "https": "http://shen.shrimp-boa.ts.net:8080",
+    "http": "http://shen.shrimp-boa.ts.net:2880",
+    "https": "http://shen.shrimp-boa.ts.net:2880",
 }
 ```
 
@@ -72,7 +72,7 @@ proxies = {
 
 ```js
 import { ProxyAgent } from "undici";
-const agent = new ProxyAgent("http://shen.shrimp-boa.ts.net:8080");
+const agent = new ProxyAgent("http://shen.shrimp-boa.ts.net:2880");
 const res = await fetch("https://example.com", { dispatcher: agent });
 ```
 
@@ -83,8 +83,8 @@ services:
   my-scraper:
     image: my-scraper:latest
     environment:
-      - HTTP_PROXY=http://shen.shrimp-boa.ts.net:8080
-      - HTTPS_PROXY=http://shen.shrimp-boa.ts.net:8080
+      - HTTP_PROXY=http://shen.shrimp-boa.ts.net:2880
+      - HTTPS_PROXY=http://shen.shrimp-boa.ts.net:2880
     networks:
       - dokploy-network  # must be on Tailscale-reachable network
 ```
@@ -103,18 +103,18 @@ The proxy adds latency (residential network + Tailscale relay). Recommended clie
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Connection refused on port 1080/8080 | g3proxy container down | Check Dokploy deployment status |
+| Connection refused on port 2080/2880 | g3proxy container down | Check Dokploy deployment status |
 | SOCKS5 "general failure" / HTTP 502 | No backends in pool (all laptops offline) | Wait for a laptop to come online, or check health-checker logs |
 | Slow responses | Residential network latency | Normal — not datacenter speeds |
 | Different IP on each request | Multiple backends in pool, round-robin | Expected behavior |
 
 ## Choosing SOCKS5 vs HTTP proxy
 
-| Factor | SOCKS5 (port 1080) | HTTP CONNECT (port 8080) |
+| Factor | SOCKS5 (port 2080) | HTTP CONNECT (port 2880) |
 |---|---|---|
 | Protocol support | Any TCP (HTTP, HTTPS, custom) | HTTP and HTTPS only |
 | DNS resolution | `socks5h://` = proxy resolves DNS | Client resolves DNS |
 | Library support | Needs SOCKS library (`pysocks`, etc.) | Built into most HTTP clients |
 | `HTTP_PROXY` env var | Not standard | Works everywhere |
 
-**Default recommendation:** Use HTTP proxy on port 8080 unless you need non-HTTP TCP traffic or proxy-side DNS resolution.
+**Default recommendation:** Use HTTP proxy on port 2880 unless you need non-HTTP TCP traffic or proxy-side DNS resolution.

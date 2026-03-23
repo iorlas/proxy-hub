@@ -18,17 +18,102 @@ dev = [
     "ty>=0.0.13",
     "fakeredis[aioredis]>=2.26",
     "aioresponses>=0.7",
+    "yamllint>=1.35",
+    "pip-audit>=2.7",
 ]
 
 [tool.ruff]
 target-version = "py313"
 line-length = 140
+output-format = "concise"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = [
+    # ── PREVENT: hard errors, no ambiguity ──
+    "F",         # pyflakes — undefined names, unused imports
+    "S",         # flake8-bandit — security
+    "T10",       # flake8-debugger — leftover pdb/breakpoint()
+    "T20",       # flake8-print — leftover print() debug statements
+    "BLE",       # flake8-blind-except — bare except:
+    "PGH",       # pygrep-hooks — blanket type: ignore, eval()
+
+    # ── ENFORCE: deterministic style, auto-fixable ──
+    "E", "W",    # pycodestyle
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "C4",        # flake8-comprehensions
+    "PIE",       # flake8-pie
+    "TC",        # flake8-type-checking
+    "PTH",       # flake8-use-pathlib
+    "FURB",      # refurb
+    "RUF",       # ruff-specific
+
+    # ── DETECT: flags potential problems ──
+    "B",         # flake8-bugbear
+    "A",         # flake8-builtins
+    "DTZ",       # flake8-datetimez
+    "ISC",       # flake8-implicit-str-concat
+    "RET",       # flake8-return
+    "SIM",       # flake8-simplify
+    "ARG",       # flake8-unused-arguments
+    "PERF",      # perflint
+    "LOG",       # flake8-logging
+    "G",         # flake8-logging-format
+    "SLF",       # flake8-self
+    "TID",       # flake8-tidy-imports
+    "PL",        # pylint subset
+
+    # ── STRUCTURE: clean architecture ──
+    "C90",       # mccabe — cyclomatic complexity
+    "EM",        # flake8-errmsg
+    "FBT",       # flake8-boolean-trap
+    "PT",        # flake8-pytest-style
+]
+ignore = [
+    "SIM108",    # ternary — often hurts readability
+    "SIM110",    # any() rewrite — comprehension often clearer
+    "RUF001",    # ambiguous unicode — intentional Cyrillic/emoji
+    "RUF015",    # next(iter()) vs [0]
+    "EM101",     # string literal in exception — too strict
+    "EM102",     # f-string in exception — same
+    "FBT001",    # boolean positional arg def — too noisy
+    "FBT002",    # boolean default value — same
+    "PLR0913",   # too many arguments — config constructors
+    "PLR2004",   # magic value comparison — thresholds, HTTP codes
+    "ARG001",    # unused function argument — fixtures, callbacks
+    "A003",      # class attribute shadows builtin — Pydantic models
+    "PT001",     # @pytest.fixture() vs @pytest.fixture — pure style
+    "PT023",     # @pytest.mark.unit() vs @pytest.mark.unit — same
+    "PERF203",   # try/except in loop — valid for per-item processing
+    "RET504",    # unnecessary assignment before return — useful for debugging
+    "PLW2901",   # loop variable overwritten — line = line.strip() is fine
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 8
+max-statements = 50
+max-branches = 10
+max-returns = 6
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",      # assert — standard in tests
+    "S106",      # hardcoded passwords — test fixtures
+    "E402",      # import order — tests set env vars before imports
+    "ARG001",    # unused arguments — pytest fixtures
+    "PLR2004",   # magic values — test assertions
+    "SLF001",    # private member access — testing internals
+    "PT011",     # pytest.raises too broad — sometimes intentional
+    "PLR0915",   # too many statements — long test scenarios
+]
 
 [tool.ty.environment]
 python-version = "3.13"
+python = "./.venv"
 
 [tool.ty.rules]
 possibly-unresolved-reference = "error"
@@ -54,9 +139,12 @@ branch = true
 omit = ["proxy_scanner/main.py"]
 
 [tool.coverage.report]
+show_missing = false
 skip_covered = true
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.",
     "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "\\.\\.\\.",
 ]

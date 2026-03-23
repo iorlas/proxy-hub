@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import aiohttp
 from aiohttp_socks import ProxyConnector
 
-from proxy_scanner.source_fetcher import Proxy
+if TYPE_CHECKING:
+    from proxy_scanner.source_fetcher import Proxy
 
 log = logging.getLogger(__name__)
 
@@ -57,8 +59,7 @@ async def _make_session(proxy: Proxy, timeout: aiohttp.ClientTimeout) -> tuple[a
     if proxy.protocol == "socks5":
         connector = ProxyConnector.from_url(proxy.proxy_url)
         return aiohttp.ClientSession(connector=connector, timeout=timeout), None
-    else:
-        return aiohttp.ClientSession(timeout=timeout), proxy.proxy_url
+    return aiohttp.ClientSession(timeout=timeout), proxy.proxy_url
 
 
 async def check_alive_and_anonymity(proxy: Proxy, real_ip: str) -> ProxyCheckResult | None:
@@ -84,7 +85,7 @@ async def check_alive_and_anonymity(proxy: Proxy, real_ip: str) -> ProxyCheckRes
             anonymity=anonymity,
             country="",  # GeoIP deferred
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — any failure means proxy is broken
         return None
 
 
@@ -108,7 +109,7 @@ async def check_youtube(proxy: Proxy) -> bool:
 
         found = sum(1 for marker in YOUTUBE_MARKERS if marker in body)
         return found >= 2
-    except Exception:
+    except Exception:  # noqa: BLE001 — any failure means proxy is broken
         return False
 
 
@@ -132,5 +133,5 @@ async def check_bandwidth(proxy: Proxy) -> int:
             if len(data) < 1_000_000:  # incomplete download
                 return 0
             return max(1, int(len(data) / elapsed / 1024))
-    except Exception:
+    except Exception:  # noqa: BLE001 — any failure means proxy is broken
         return 0

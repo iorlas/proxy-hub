@@ -2,10 +2,10 @@ services:
   g3proxy:
     image: ghcr.io/${GITHUB_OWNER}/proxy-hub-g3proxy:${IMAGE_TAG:-latest}
     ports:
-      - "${TAILSCALE_IP}:1080:1080"
-      - "${TAILSCALE_IP}:1081:1081"
-      - "${TAILSCALE_IP}:8080:8080"
-      - "${TAILSCALE_IP}:8081:8081"
+      - "${TAILSCALE_IP}:2080:2080"
+      - "${TAILSCALE_IP}:2081:2081"
+      - "${TAILSCALE_IP}:2880:2880"
+      - "${TAILSCALE_IP}:2881:2881"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:

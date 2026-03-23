@@ -58,28 +58,28 @@ escaper:
     fallback_delay: 3500ms
 
 server:
-  # Port 1080/8080: full failover (free → laptops)
+  # Port 2080/2880: full failover (free → laptops)
   - name: socks-in
     type: socks_proxy
     escaper: failover-full
     listen:
-      address: "0.0.0.0:1080"
+      address: "0.0.0.0:2080"
 
   - name: http-in
     type: http_proxy
     escaper: failover-full
     listen:
-      address: "0.0.0.0:8080"
+      address: "0.0.0.0:2880"
 
-  # Port 1081/8081: free proxies only (NO laptop fallback)
+  # Port 2081/2881: free proxies only (NO laptop fallback)
   - name: socks-free-only
     type: socks_proxy
     escaper: free-only
     listen:
-      address: "0.0.0.0:1081"
+      address: "0.0.0.0:2081"
 
   - name: http-free-only
     type: http_proxy
     escaper: free-only
     listen:
-      address: "0.0.0.0:8081"
+      address: "0.0.0.0:2881"

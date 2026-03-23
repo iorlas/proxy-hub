@@ -4,10 +4,10 @@ services:
       context: ./g3proxy
       dockerfile: Dockerfile
     ports:
-      - "1080:1080"
-      - "1081:1081"
-      - "8080:8080"
-      - "8081:8081"
+      - "2080:2080"
+      - "2081:2081"
+      - "2880:2880"
+      - "2881:2881"
     env_file:
       - .env
     volumes:
