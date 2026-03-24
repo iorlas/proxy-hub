@@ -8,14 +8,14 @@ Routes SOCKS5/HTTP traffic through free proxies with failover to residential lap
 - **Before changing g3proxy config:** read `g3proxy/config/g3proxy.yaml.tmpl` for escaper/listener architecture
 - **Before changing deployment:** read `docs/guidelines/deployment.md`
 
-## Dev Commands (proxy-scanner)
+## Dev Commands
 
-- Run tests: `make -C proxy-scanner test` (with coverage — check for uncovered lines in files you changed)
-- Lint: `make -C proxy-scanner lint` (check only, never modifies files — safe for AI to run anytime)
-- Fix: `make -C proxy-scanner fix` (auto-fix, then runs lint to verify)
-- After fixing: `make -C proxy-scanner fix && make -C proxy-scanner test` (fix already includes lint)
-- Full gate: `make -C proxy-scanner check` (lint + test)
-- Never truncate these commands with `| tail` or `| head` — output is already optimized for minimal noise, truncation hides errors
+- Lint: `make lint` (check only, never modifies files — safe to run anytime)
+- Fix: `make fix` (auto-fix, then runs lint to verify)
+- Full gate: `make check` (lint + test)
+- Test: `make test` (runs proxy-scanner tests)
+- Bootstrap: `make bootstrap` (install tools + pre-commit hooks)
+- Never truncate these commands with `| tail` or `| head` — output is already optimized
 
 ## Never
 
