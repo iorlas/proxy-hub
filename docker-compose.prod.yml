@@ -45,7 +45,7 @@ services:
       - MAC_FQDN=${MAC_FQDN}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "health_check.py"]
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -61,7 +61,7 @@ services:
     volumes:
       - scanner-data:/data
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "main.py"]
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -27,7 +27,7 @@ COPY --from=builder /usr/bin/g3proxy /usr/bin/g3proxy
 
 RUN mkdir -p /etc/g3proxy /var/cache/g3proxy && \
     useradd -r -s /usr/sbin/nologin g3proxy && \
-    chown g3proxy:g3proxy /var/cache/g3proxy
+    chown g3proxy:g3proxy /etc/g3proxy /var/cache/g3proxy
 
 COPY config/g3proxy.yaml.tmpl /etc/g3proxy/g3proxy.yaml.tmpl
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

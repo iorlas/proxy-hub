@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY health_check.py /usr/local/bin/health_check.py
 
-HEALTHCHECK CMD pgrep -f health_check.py || exit 1
+HEALTHCHECK CMD python -c "import os; os.kill(1, 0)" || exit 1
 
 USER app
 CMD ["python", "-u", "/usr/local/bin/health_check.py"]
