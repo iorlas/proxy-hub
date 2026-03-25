@@ -1,0 +1,5 @@
+# AI Harness configuration
+stacks: [docker, dokploy]
+
+docker:
+  own_image_prefix: "ghcr.io/"

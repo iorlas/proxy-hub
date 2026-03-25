@@ -152,7 +152,10 @@ async def run_cycle(r: aioredis.Redis, stats_path: Path) -> CycleStats:
         slow_count=len(slow_entries),
     )
 
-    append_stats(stats_path, stats)
+    try:
+        append_stats(stats_path, stats)
+    except OSError:
+        log.warning("Could not write stats to %s", stats_path, exc_info=True)
     log.info(
         "Pool updated: %d fast + %d slow proxies (%d retained + %d new)",
         len(fast_entries),
