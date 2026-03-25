@@ -10,6 +10,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY proxy_scanner/ ./proxy_scanner/
 
+RUN mkdir -p /data && chown app:app /data
+
 HEALTHCHECK CMD python -c "import os; os.kill(1, 0)" || exit 1
 
 ENV PYTHONPATH=/app
