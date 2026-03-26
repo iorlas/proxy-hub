@@ -5,13 +5,11 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 import aiohttp
 from aiohttp_socks import ProxyConnector
 
-if TYPE_CHECKING:
-    from proxy_api.source_fetcher import Proxy
+from proxy_api.source_fetcher import Proxy
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +85,17 @@ async def check_alive_and_anonymity(proxy: Proxy, real_ip: str) -> ProxyCheckRes
         )
     except Exception:  # noqa: BLE001 — any failure means proxy is broken
         return None
+
+
+async def check_alive_with_fallback(proxy: Proxy, real_ip: str) -> ProxyCheckResult | None:
+    """Check proxy with its labeled protocol; on failure, try the opposite protocol."""
+    result = await check_alive_and_anonymity(proxy, real_ip)
+    if result is not None:
+        return result
+    # Try opposite protocol — Proxy is frozen, create new instance
+    alt_protocol = "http" if proxy.protocol == "socks5" else "socks5"
+    alt_proxy = Proxy(addr=proxy.addr, source=proxy.source, protocol=alt_protocol)
+    return await check_alive_and_anonymity(alt_proxy, real_ip)
 
 
 async def check_youtube(proxy: Proxy) -> bool:
