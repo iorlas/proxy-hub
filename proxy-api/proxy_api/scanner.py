@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import aiohttp
 
 from proxy_api.pool_manager import POOL_KEY_FAST, POOL_KEY_SLOW, build_proxy_entry, get_retained_proxies, update_pool
+from proxy_api.reputation import clear_reputation
 from proxy_api.source_fetcher import SOURCES, fetch_all_sources
 from proxy_api.stats import CycleStats, append_stats
 from proxy_api.validators import FAST_THRESHOLD_KBS, check_alive_and_anonymity, check_bandwidth, check_web_general, check_youtube
@@ -149,6 +150,9 @@ async def run_cycle(r: Redis, stats_path: Path) -> CycleStats:
     # Atomic swap both pools
     await update_pool(r, fast_entries, POOL_KEY_FAST)
     await update_pool(r, slow_entries, POOL_KEY_SLOW)
+
+    # Reset reputation scores — fresh pool, fresh slate
+    await clear_reputation(r)
 
     # Clean up old single pool key (migration)
     await r.delete("proxy_pool:free")

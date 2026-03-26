@@ -66,3 +66,30 @@ async def test_run_cycle_end_to_end(redis_client, tmp_path):
     assert line["web_general_ok"] == 1
     assert "fast" in line
     assert "slow" in line
+
+
+@pytest.mark.integration
+async def test_run_cycle_clears_reputation(redis_client, tmp_path):
+    stats_path = tmp_path / "stats.log"
+    bandwidth_data = b"x" * 2_000_000
+
+    # Seed some reputation data before the cycle
+    await redis_client.hset("proxy_reputation", "1.2.3.4:8080", 5)
+
+    with aioresponses() as m:
+        m.get(SOURCES["proxyscrape_http"], body="1.2.3.4:8080\n")
+        for name, url in SOURCES.items():
+            if name != "proxyscrape_http":
+                m.get(url, body="")
+
+        m.get("https://httpbin.org/ip", payload={"origin": "99.99.99.99"})
+        m.get("https://httpbin.org/anything", payload={"origin": "1.2.3.4", "headers": {"Host": "httpbin.org"}})
+        m.get("https://www.youtube.com/watch?v=jNQXAC9IVRw", body=_youtube_body())
+        for url in WEB_GENERAL_SITES:
+            m.get(url, body=_web_body(), status=200)
+        m.get(BANDWIDTH_URL, body=bandwidth_data)
+
+        await run_cycle(redis_client, stats_path)
+
+    # After cycle, reputation should be cleared
+    assert await redis_client.exists("proxy_reputation") == 0
