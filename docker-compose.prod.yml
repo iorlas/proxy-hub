@@ -54,21 +54,26 @@ services:
       redis:
         condition: service_healthy
 
-  proxy-scanner:
-    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-scanner:${IMAGE_TAG}
+  proxy-api:
+    image: ghcr.io/${GITHUB_OWNER}/proxy-hub-api:${IMAGE_TAG}
+    hostname: proxy-api
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    volumes:
-      - scanner-data:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
     restart: unless-stopped
+    networks:
+      - default
+      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
+    volumes:
+      - scanner-data:/data
 
 volumes:
   redis-data:

@@ -36,10 +36,11 @@ services:
     depends_on:
       - redis
 
-  proxy-scanner:
+  proxy-api:
     build:
-      context: ./proxy-scanner
-      dockerfile: Dockerfile
+      context: ./proxy-api
+    ports:
+      - "8090:8080"
     env_file:
       - .env
     volumes:
