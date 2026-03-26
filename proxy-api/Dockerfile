@@ -12,7 +12,7 @@ COPY proxy_api/ ./proxy_api/
 
 RUN mkdir -p /data && chown app:app /data
 
-HEALTHCHECK CMD python -c "import os; os.kill(1, 0)" || exit 1
+HEALTHCHECK CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
 ENV PYTHONPATH=/app
 USER app
