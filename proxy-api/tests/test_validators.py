@@ -7,11 +7,13 @@ from proxy_api.source_fetcher import Proxy
 from proxy_api.validators import (
     BANDWIDTH_URL,
     HTTPBIN_URL,
+    WEB_GENERAL_SITES,
     YOUTUBE_URL,
     ProxyCheckResult,
     check_alive_and_anonymity,
     check_alive_with_fallback,
     check_bandwidth,
+    check_web_general,
     check_youtube,
 )
 
@@ -102,6 +104,52 @@ async def test_youtube_fail_timeout():
     with aioresponses() as m:
         m.get(YOUTUBE_URL, exception=TimeoutError("test"))
         result = await check_youtube(proxy)
+    assert result is False
+
+
+def _web_body() -> str:
+    return "<html>" + "x" * 2000 + "</html>"
+
+
+@pytest.mark.unit
+async def test_web_general_all_succeed():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        for url in WEB_GENERAL_SITES:
+            m.get(url, body=_web_body(), status=200)
+        result = await check_web_general(proxy)
+    assert result is True
+
+
+@pytest.mark.unit
+async def test_web_general_two_of_three_succeed():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        m.get(WEB_GENERAL_SITES[0], body=_web_body(), status=200)
+        m.get(WEB_GENERAL_SITES[1], body=_web_body(), status=200)
+        m.get(WEB_GENERAL_SITES[2], exception=TimeoutError("test"))
+        result = await check_web_general(proxy)
+    assert result is True
+
+
+@pytest.mark.unit
+async def test_web_general_only_one_succeeds():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        m.get(WEB_GENERAL_SITES[0], body=_web_body(), status=200)
+        m.get(WEB_GENERAL_SITES[1], exception=TimeoutError("test"))
+        m.get(WEB_GENERAL_SITES[2], body="short", status=200)
+        result = await check_web_general(proxy)
+    assert result is False
+
+
+@pytest.mark.unit
+async def test_web_general_all_fail():
+    proxy = Proxy(addr="1.2.3.4:8080", source="test", protocol="http")
+    with aioresponses() as m:
+        for url in WEB_GENERAL_SITES:
+            m.get(url, exception=TimeoutError("test"))
+        result = await check_web_general(proxy)
     assert result is False
 
 

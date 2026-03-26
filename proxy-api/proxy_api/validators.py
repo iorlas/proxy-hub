@@ -122,6 +122,37 @@ async def check_youtube(proxy: Proxy) -> bool:
         return False
 
 
+WEB_GENERAL_SITES = [
+    "https://www.wikipedia.org",
+    "https://news.ycombinator.com",
+    "https://httpbin.org/html",
+]
+WEB_GENERAL_MIN_BODY = 1000
+WEB_GENERAL_REQUIRED = 2
+
+
+async def check_web_general(proxy: Proxy) -> bool:
+    """Stage 2b: verify proxy can load general websites (≥2 of 3 must succeed)."""
+    passed = 0
+    try:
+        session, proxy_arg = await _make_session(proxy, STAGE2_TIMEOUT)
+        async with session:
+            for url in WEB_GENERAL_SITES:
+                try:
+                    kwargs: dict = {}
+                    if proxy_arg:
+                        kwargs["proxy"] = proxy_arg
+                    async with session.get(url, **kwargs) as resp:
+                        body = await resp.text()
+                    if resp.status == 200 and len(body) > WEB_GENERAL_MIN_BODY:
+                        passed += 1
+                except Exception:  # noqa: BLE001, S112 — individual site failure is OK
+                    continue
+    except Exception:  # noqa: BLE001 — session creation failure
+        return False
+    return passed >= WEB_GENERAL_REQUIRED
+
+
 BANDWIDTH_URL = "https://speed.cloudflare.com/__down?bytes=2000000"
 BANDWIDTH_TIMEOUT = aiohttp.ClientTimeout(connect=10, total=45)
 FAST_THRESHOLD_KBS = 1024  # 1 MB/s

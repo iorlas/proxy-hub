@@ -22,7 +22,8 @@ class CycleStats:
     alive_anon: int
     transparent_rejected: int
     youtube_ok: int
-    pool_size: int
+    web_general_ok: int = 0
+    pool_size: int = 0
     sources: dict[str, int] = field(default_factory=dict)
     fast_count: int = 0
     slow_count: int = 0
@@ -39,6 +40,7 @@ def format_stats_line(stats: CycleStats) -> str:
             "alive_anon": stats.alive_anon,
             "transparent_rejected": stats.transparent_rejected,
             "youtube_ok": stats.youtube_ok,
+            "web_general_ok": stats.web_general_ok,
             "pool_size": stats.pool_size,
             "fast": stats.fast_count,
             "slow": stats.slow_count,

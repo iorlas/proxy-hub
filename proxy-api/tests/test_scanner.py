@@ -6,11 +6,15 @@ from aioresponses import aioresponses
 from proxy_api.pool_manager import POOL_KEY_FAST, POOL_KEY_SLOW
 from proxy_api.scanner import run_cycle
 from proxy_api.source_fetcher import SOURCES
-from proxy_api.validators import BANDWIDTH_URL
+from proxy_api.validators import BANDWIDTH_URL, WEB_GENERAL_SITES
 
 
 def _youtube_body() -> str:
     return "<html>" + "x" * 10000 + "ytInitialPlayerResponse" + "videoDetails" + "</html>"
+
+
+def _web_body() -> str:
+    return "<html>" + "x" * 2000 + "</html>"
 
 
 @pytest.mark.integration
@@ -33,12 +37,17 @@ async def test_run_cycle_end_to_end(redis_client, tmp_path):
         # Stage 2: YouTube succeeds
         m.get("https://www.youtube.com/watch?v=jNQXAC9IVRw", body=_youtube_body())
 
+        # Stage 2b: general web validation succeeds
+        for url in WEB_GENERAL_SITES:
+            m.get(url, body=_web_body(), status=200)
+
         # Stage 3: bandwidth test succeeds (fast proxy)
         m.get(BANDWIDTH_URL, body=bandwidth_data)
 
         stats = await run_cycle(redis_client, stats_path)
 
     assert stats.youtube_ok == 1
+    assert stats.web_general_ok == 1
     # proxy ended up in fast or slow pool
     assert stats.fast_count + stats.slow_count >= 1
 
@@ -54,5 +63,6 @@ async def test_run_cycle_end_to_end(redis_client, tmp_path):
     assert stats_path.exists()
     line = json.loads(stats_path.read_text().strip())
     assert line["youtube_ok"] == 1
+    assert line["web_general_ok"] == 1
     assert "fast" in line
     assert "slow" in line

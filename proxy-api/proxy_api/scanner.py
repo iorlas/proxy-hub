@@ -13,7 +13,7 @@ import aiohttp
 from proxy_api.pool_manager import POOL_KEY_FAST, POOL_KEY_SLOW, build_proxy_entry, get_retained_proxies, update_pool
 from proxy_api.source_fetcher import SOURCES, fetch_all_sources
 from proxy_api.stats import CycleStats, append_stats
-from proxy_api.validators import FAST_THRESHOLD_KBS, check_alive_and_anonymity, check_bandwidth, check_youtube
+from proxy_api.validators import FAST_THRESHOLD_KBS, check_alive_and_anonymity, check_bandwidth, check_web_general, check_youtube
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 
 STAGE1_CONCURRENCY = 200
 STAGE2_CONCURRENCY = 30
+STAGE2B_CONCURRENCY = 30
 STAGE3_CONCURRENCY = 10  # lower — each downloads 2MB
 STATS_PATH_DEFAULT = "/data/scanner-stats.log"
 
@@ -65,6 +66,20 @@ async def _run_stage2(proxies: list[Proxy]) -> list[Proxy]:
     async def check(proxy: Proxy) -> None:
         async with sem:
             if await check_youtube(proxy):
+                passed.append(proxy)
+
+    await asyncio.gather(*(check(p) for p in proxies))
+    return passed
+
+
+async def _run_stage2b(proxies: list[Proxy]) -> list[Proxy]:
+    """Stage 2b: general web validation."""
+    sem = asyncio.Semaphore(STAGE2B_CONCURRENCY)
+    passed: list[Proxy] = []
+
+    async def check(proxy: Proxy) -> None:
+        async with sem:
+            if await check_web_general(proxy):
                 passed.append(proxy)
 
     await asyncio.gather(*(check(p) for p in proxies))
@@ -119,9 +134,13 @@ async def run_cycle(r: Redis, stats_path: Path) -> CycleStats:
     stage2_passed = await _run_stage2(stage1_passed)
     log.info("Stage 2 complete: %d/%d YouTube OK", len(stage2_passed), len(stage1_passed))
 
+    # Stage 2b: general web validation
+    stage2b_passed = await _run_stage2b(stage2_passed)
+    log.info("Stage 2b complete: %d/%d general web OK", len(stage2b_passed), len(stage2_passed))
+
     # Stage 3: bandwidth
-    fast_proxies, slow_proxies = await _run_stage3(stage2_passed)
-    log.info("Stage 3 complete: %d fast, %d slow (of %d YouTube OK)", len(fast_proxies), len(slow_proxies), len(stage2_passed))
+    fast_proxies, slow_proxies = await _run_stage3(stage2b_passed)
+    log.info("Stage 3 complete: %d fast, %d slow (of %d web OK)", len(fast_proxies), len(slow_proxies), len(stage2b_passed))
 
     # Build entries
     fast_entries = retained_fast + [build_proxy_entry(p) for p in fast_proxies]
@@ -148,6 +167,7 @@ async def run_cycle(r: Redis, stats_path: Path) -> CycleStats:
         alive_anon=len(stage1_passed),
         transparent_rejected=transparent_rejected,
         youtube_ok=len(stage2_passed),
+        web_general_ok=len(stage2b_passed),
         pool_size=pool_size,
         sources=source_counts,
         fast_count=len(fast_entries),
