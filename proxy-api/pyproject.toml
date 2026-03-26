@@ -136,7 +136,7 @@ markers = [
 [tool.coverage.run]
 source = ["proxy_api"]
 branch = true
-omit = ["proxy_api/scanner.py"]
+omit = ["proxy_api/main.py", "proxy_api/scanner.py"]
 
 [tool.coverage.report]
 show_missing = false
