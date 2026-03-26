@@ -118,3 +118,87 @@ The proxy adds latency (residential network + Tailscale relay). Recommended clie
 | `HTTP_PROXY` env var | Not standard | Works everywhere |
 
 **Default recommendation:** Use HTTP proxy on port 2880 unless you need non-HTTP TCP traffic or proxy-side DNS resolution.
+
+---
+
+## Proxy API
+
+The Proxy API is a lightweight HTTP service that sits in front of the proxy pool and adds **smart proxy selection with runtime reputation tracking**. It lets callers pick a specific backend proxy address and report failures back, so the system can avoid known-bad proxies within a scan cycle.
+
+Use the Proxy API when you need **session stickiness** — all requests for a single job (e.g. a webpage download including all page resources) go through the same proxy. For simple fire-and-forget traffic (collectors, yt-dlp), the g3proxy ports (2080 / 2880) remain simpler.
+
+### Service overview
+
+- **Port:** 8080 (internal to Docker network, not exposed to the internet)
+- **Network:** `dokploy-network` — accessible by any service on the same Docker network
+- **State:** Redis Hash key `proxy_reputation` — stores failure count per proxy address
+- **Reputation reset:** The scanner resets reputation each scan cycle, so a proxy that was failing gets a fresh start once the pool is rebuilt
+
+### Endpoints
+
+#### `GET /proxy?protocol=socks5|http`
+
+Returns a proxy address selected from the pool, preferring proxies with fewer recorded failures.
+
+**Query parameters:**
+
+| Parameter | Values | Default |
+|---|---|---|
+| `protocol` | `socks5`, `http` | `socks5` |
+
+**Response (200):**
+```json
+{"addr": "1.2.3.4:1080", "protocol": "socks5"}
+```
+
+**Response (503):** Pool is empty (no backends available for the requested protocol).
+
+#### `POST /proxy/{addr}/fail`
+
+Reports that the proxy at `addr` failed. Increments the failure counter in Redis.
+
+**Path parameter:** `addr` — the address returned by `GET /proxy` (e.g. `1.2.3.4:1080`)
+
+**Response (200):**
+```json
+{"addr": "1.2.3.4:1080", "failures": 3}
+```
+
+#### `GET /health`
+
+Service health check. Returns 200 when the API is up.
+
+### How reputation works
+
+1. `GET /proxy` reads `proxy_reputation` from Redis and selects a backend with the fewest failures.
+2. When a download fails, the caller calls `POST /proxy/{addr}/fail` to increment that proxy's failure count.
+3. The scanner runs on its normal cycle and rebuilds the proxy pool, which resets `proxy_reputation` to zero for all proxies.
+
+This means reputation is ephemeral within a cycle — a bad proxy is deprioritised for the current cycle, then gets a fresh chance on the next scan.
+
+**Redis key:** `proxy_reputation` (Hash — field: proxy address, value: failure count as integer)
+
+### Usage example (Aggre)
+
+Aggre sets `AGGRE_PROXY_API_URL=http://proxy-api:8080` in its environment. The webpage workflow calls `GET /proxy` before each download to obtain a proxy address, then uses that specific address for all requests in the download session. On any network error, it calls `POST /proxy/{addr}/fail` before retrying or giving up.
+
+```python
+# Before download
+resp = httpx.get(f"{AGGRE_PROXY_API_URL}/proxy?protocol=socks5")
+if resp.status_code == 503:
+    raise NoProxyAvailableError()
+proxy = resp.json()  # {"addr": "1.2.3.4:1080", "protocol": "socks5"}
+
+# On failure
+httpx.post(f"{AGGRE_PROXY_API_URL}/proxy/{proxy['addr']}/fail")
+```
+
+### Proxy API vs g3proxy
+
+| | Proxy API (port 8080) | g3proxy (port 2080 / 2880) |
+|---|---|---|
+| What it returns | A specific proxy address | Proxied connection (round-robin) |
+| Session stickiness | Yes — caller pins to returned address | No — each connection may use a different backend |
+| Failure reporting | Yes — `POST /proxy/{addr}/fail` | No |
+| Use case | Webpage downloads (Aggre), anything needing a stable IP per session | Collectors, yt-dlp, simple HTTP/SOCKS clients |
+| Access | Docker-internal (dokploy-network) | Tailscale network |
