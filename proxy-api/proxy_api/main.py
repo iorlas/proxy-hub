@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 import redis.asyncio as aioredis
 from aiohttp import web
@@ -13,12 +14,13 @@ from proxy_api.scanner import run_cycle
 logger = logging.getLogger(__name__)
 
 CYCLE_INTERVAL = 30 * 60
+STATS_PATH = Path("/data/scanner-stats.log")
 
 
 async def scanner_loop(r: aioredis.Redis) -> None:
     while True:
         try:
-            await run_cycle(r)
+            await run_cycle(r, STATS_PATH)
         except Exception:
             logger.exception("scanner.cycle_failed")
         await asyncio.sleep(CYCLE_INTERVAL)
