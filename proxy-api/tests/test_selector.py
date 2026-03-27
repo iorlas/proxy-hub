@@ -6,7 +6,7 @@ import pytest
 
 from proxy_api.pool_manager import POOL_KEY_FAST, POOL_KEY_SLOW
 from proxy_api.reputation import record_failure
-from proxy_api.selector import select_proxy
+from proxy_api.selector import get_pool_stats, select_proxy
 
 pytestmark = pytest.mark.asyncio
 
@@ -95,6 +95,46 @@ async def test_low_failure_preferred(redis_client):
     # Both can appear (random from top 5 which includes both since pool < 5),
     # but let's just verify we get valid results
     assert results <= {good_addr, bad_addr}
+
+
+async def test_get_pool_stats_empty(redis_client):
+    stats, addrs = await get_pool_stats(redis_client)
+    assert stats == {
+        "fast": {"total": 0, "socks5": 0, "http": 0},
+        "slow": {"total": 0, "socks5": 0, "http": 0},
+    }
+    assert addrs == []
+
+
+async def test_get_pool_stats_mixed_protocols(redis_client):
+    await redis_client.sadd(POOL_KEY_FAST, _entry("socks5", "1.1.1.1:1080"))
+    await redis_client.sadd(POOL_KEY_FAST, _entry("socks5", "1.1.1.2:1080"))
+    await redis_client.sadd(POOL_KEY_FAST, _entry("http", "1.1.1.3:3128"))
+    await redis_client.sadd(POOL_KEY_SLOW, _entry("http", "2.2.2.1:3128"))
+    await redis_client.sadd(POOL_KEY_SLOW, _entry("socks5", "2.2.2.2:1080"))
+
+    stats, addrs = await get_pool_stats(redis_client)
+
+    assert stats["fast"]["total"] == 3
+    assert stats["fast"]["socks5"] == 2
+    assert stats["fast"]["http"] == 1
+    assert stats["slow"]["total"] == 2
+    assert stats["slow"]["socks5"] == 1
+    assert stats["slow"]["http"] == 1
+    assert sorted(addrs) == sorted(["1.1.1.1:1080", "1.1.1.2:1080", "1.1.1.3:3128", "2.2.2.1:3128", "2.2.2.2:1080"])
+
+
+async def test_get_pool_stats_expired_excluded(redis_client):
+    await redis_client.sadd(POOL_KEY_FAST, _entry("socks5", "1.1.1.1:1080"))
+    await redis_client.sadd(POOL_KEY_FAST, _entry("socks5", "1.1.1.2:1080", "2000-01-01T00:00:00Z"))
+    await redis_client.sadd(POOL_KEY_SLOW, _entry("http", "2.2.2.1:3128", "2000-01-01T00:00:00Z"))
+
+    stats, addrs = await get_pool_stats(redis_client)
+
+    assert stats["fast"]["total"] == 1
+    assert stats["fast"]["socks5"] == 1
+    assert stats["slow"]["total"] == 0
+    assert addrs == ["1.1.1.1:1080"]
 
 
 async def test_both_protocols_present_filter_works(redis_client):
