@@ -39,7 +39,7 @@ def main() -> None:  # pragma: no cover
         decode_responses=True,
     )
 
-    app = create_app(r)
+    app = create_app(r, stats_path=STATS_PATH)
 
     async def start_background(app: web.Application) -> None:
         app["scanner_task"] = asyncio.create_task(scanner_loop(r))

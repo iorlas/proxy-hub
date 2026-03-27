@@ -63,3 +63,74 @@ async def test_health_returns_ok(client):
     assert resp.status == 200
     body = await resp.json()
     assert body["status"] == "ok"
+
+
+@pytest.fixture
+async def stats_client(redis_client, tmp_path):
+    stats_path = tmp_path / "stats.log"
+    app = create_app(redis_client, stats_path=stats_path)
+    async with TestClient(TestServer(app)) as c:
+        yield c, stats_path
+
+
+async def test_stats_with_seeded_pools(redis_client, stats_client):
+    client, stats_path = stats_client
+    await redis_client.sadd(POOL_KEY_FAST, _entry("socks5", "1.2.3.4:1080"))
+    await redis_client.sadd(POOL_KEY_FAST, _entry("http", "5.6.7.8:8080"))
+    # Record a failure so reputation is non-trivial
+    await redis_client.hincrby("proxy_reputation", "1.2.3.4:1080", 3)
+    # Write a scanner stats line
+    stats_path.write_text(
+        json.dumps(
+            {
+                "ts": "2026-03-27T12:00:00Z",
+                "scraped": 100,
+                "alive_anon": 50,
+                "youtube_ok": 10,
+                "web_general_ok": 30,
+                "fast": 20,
+                "slow": 10,
+            }
+        )
+        + "\n"
+    )
+
+    resp = await client.get("/proxy/stats")
+    assert resp.status == 200
+    body = await resp.json()
+
+    assert "pools" in body
+    assert body["pools"]["fast"]["total"] == 2
+    assert body["pools"]["fast"]["socks5"] == 1
+    assert body["pools"]["fast"]["http"] == 1
+
+    assert "reputation" in body
+    assert body["reputation"]["total_tracked"] == 2
+    assert body["reputation"]["total_failures"] == 3
+
+    assert "scanner_last_cycle" in body
+    assert body["scanner_last_cycle"]["scraped"] == 100
+    assert body["scanner_last_cycle"]["fast"] == 20
+
+
+async def test_stats_empty_pools(stats_client):
+    client, _stats_path = stats_client
+
+    resp = await client.get("/proxy/stats")
+    assert resp.status == 200
+    body = await resp.json()
+
+    assert body["pools"]["fast"]["total"] == 0
+    assert body["pools"]["slow"]["total"] == 0
+    assert body["reputation"]["total_tracked"] == 0
+    assert body["reputation"]["total_failures"] == 0
+
+
+async def test_stats_no_stats_file(stats_client):
+    client, _stats_path = stats_client
+    # stats_path does not exist on disk — scanner_last_cycle should be None
+
+    resp = await client.get("/proxy/stats")
+    assert resp.status == 200
+    body = await resp.json()
+    assert body["scanner_last_cycle"] is None
