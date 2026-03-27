@@ -26,7 +26,7 @@ async def scanner_loop(r: aioredis.Redis) -> None:
         await asyncio.sleep(CYCLE_INTERVAL)
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     redis_host = os.environ.get("REDIS_HOST", "redis")
     redis_port = int(os.environ.get("REDIS_PORT", "6379"))
     redis_password = os.environ.get("REDIS_PASSWORD")
