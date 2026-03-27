@@ -4,11 +4,9 @@ check: lint test
 
 lint:
 	@agent-harness lint
-	@$(MAKE) -C proxy-api lint
 
 fix:
 	@agent-harness fix
-	@$(MAKE) -C proxy-api fix
 
 test:
 	@$(MAKE) -C proxy-api test

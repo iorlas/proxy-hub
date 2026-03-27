@@ -9,7 +9,7 @@ repos:
         always_run: true
 
       - id: lint
-        name: lint (agent-harness + ruff + ty)
+        name: agent-harness lint
         entry: make lint
         language: system
         pass_filenames: false

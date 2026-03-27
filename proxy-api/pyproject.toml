@@ -20,6 +20,7 @@ dev = [
     "aioresponses>=0.7",
     "yamllint>=1.35",
     "pip-audit>=2.7",
+    "pytest-env>=1.1",
 ]
 
 [tool.ruff]
@@ -132,6 +133,11 @@ markers = [
     "unit: pure logic, no I/O",
     "integration: requires Redis or mocked HTTP",
 ]
+
+[tool.pytest.ini_options.env]
+REDIS_HOST = "localhost"
+REDIS_PORT = "16379"
+REDIS_PASSWORD = "test"
 
 [tool.coverage.run]
 source = ["proxy_api"]

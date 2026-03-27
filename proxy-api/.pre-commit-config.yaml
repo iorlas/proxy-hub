@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: harness-lint
+        name: agent-harness lint
+        entry: agent-harness lint
+        language: system
+        pass_filenames: false
+        always_run: true

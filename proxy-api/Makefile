@@ -3,16 +3,11 @@ check: lint test
 
 # ── Lint: check only — safe for AI, CI, pre-commit. Never modifies files. ──
 lint:
-	@uv run ruff format --check || (echo "Formatting issues found. Run 'make fix' to auto-fix." && exit 1)
-	@uv run ruff check || (echo "Lint issues found. Fixable ones can be resolved with 'make fix'." && exit 1)
-	@uv run ty check
-	@uv run pip-audit || (echo "Dependency vulnerabilities found. Review with 'uv run pip-audit' and update affected packages." && exit 1)
+	@agent-harness lint
 
 # ── Fix: auto-fix, then verify with lint. ──
 fix:
-	uv run ruff check --fix
-	uv run ruff format
-	$(MAKE) lint
+	@agent-harness fix
 
 # ── Tests ──
 test:

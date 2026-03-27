@@ -1,6 +1,7 @@
 # Stage 1: Build g3proxy from source
 FROM rust:bookworm AS builder
 
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libclang-dev cmake capnproto \
     && rm -rf /var/lib/apt/lists/*
@@ -19,6 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/cargo \
 # Stage 2: Runtime
 FROM debian:bookworm-slim
 
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gettext-base ca-certificates \
     && rm -rf /var/lib/apt/lists/*

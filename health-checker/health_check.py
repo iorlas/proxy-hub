@@ -5,7 +5,7 @@ import json
 import os
 import socket
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import redis
 
@@ -35,13 +35,14 @@ def tcp_probe(host: str, port: int, timeout: float = 3.0) -> bool:
 
 def resolve_ip(host: str) -> str | None:
     try:
-        return socket.getaddrinfo(host, None, socket.AF_INET)[0][4][0]
+        addr = socket.getaddrinfo(host, None, socket.AF_INET)[0][4]
+        return str(addr[0])
     except socket.gaierror:
         return None
 
 
 def now_tag() -> str:
-    return datetime.now(timezone.utc).strftime("%H:%M:%S")
+    return datetime.now(UTC).strftime("%H:%M:%S")
 
 
 def run_cycle(r: redis.Redis, backends: list[tuple[str, int]]) -> None:
@@ -57,9 +58,7 @@ def run_cycle(r: redis.Redis, backends: list[tuple[str, int]]) -> None:
             print(f"[{now_tag()}] {host}:{port} UP but DNS resolve failed, skipping")
             continue
 
-        expire = datetime.fromtimestamp(
-            time.time() + EXPIRE_SECONDS, tz=timezone.utc
-        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        expire = datetime.fromtimestamp(time.time() + EXPIRE_SECONDS, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         entry = json.dumps({"type": "socks5", "addr": f"{ip}:{port}", "expire": expire})
         r.sadd(TEMP_KEY, entry)
