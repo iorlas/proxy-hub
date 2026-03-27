@@ -11,6 +11,7 @@ from aiohttp import web
 from proxy_api.app import create_app
 from proxy_api.scanner import run_cycle
 
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger(__name__)
 
 CYCLE_INTERVAL = 30 * 60
