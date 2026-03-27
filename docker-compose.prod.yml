@@ -55,6 +55,8 @@ services:
   proxy-api:
     image: ghcr.io/${GITHUB_OWNER}/proxy-hub-api:${IMAGE_TAG}
     hostname: proxy-api
+    ports:
+      - "${TAILSCALE_IP}:8080:8080"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     healthcheck:
