@@ -19,7 +19,7 @@ _TOP_N = 5
 
 async def _load_candidates(r: Redis, pool_key: str, protocol: str) -> list[dict]:
     """Parse pool entries, filter by protocol, and skip expired."""
-    members = await r.smembers(pool_key)
+    members = await r.smembers(pool_key)  # ty: ignore[invalid-await]
     now = time.time()
     candidates = []
     for raw in members:

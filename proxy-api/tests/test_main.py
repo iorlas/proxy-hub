@@ -51,4 +51,4 @@ async def test_scanner_loop_survives_exception(redis_client):
 
 
 def test_stats_path_is_data_dir():
-    assert STATS_PATH == Path("/data/scanner-stats.log")
+    assert Path("/data/scanner-stats.log") == STATS_PATH

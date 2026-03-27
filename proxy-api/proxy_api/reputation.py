@@ -12,14 +12,14 @@ REPUTATION_KEY = "proxy_reputation"
 
 async def record_failure(r: Redis, addr: str) -> int:
     """Increment failure count for the given proxy address and return the new count."""
-    return await r.hincrby(REPUTATION_KEY, addr, 1)
+    return await r.hincrby(REPUTATION_KEY, addr, 1)  # ty: ignore[invalid-await]
 
 
 async def get_failures(r: Redis, addrs: list[str]) -> dict[str, int]:
     """Return failure counts for each address. Unknown addresses return 0."""
     if not addrs:
         return {}
-    values = await r.hmget(REPUTATION_KEY, *addrs)
+    values = await r.hmget(REPUTATION_KEY, *addrs)  # ty: ignore[invalid-await,invalid-argument-type]
     return {addr: int(v or 0) for addr, v in zip(addrs, values, strict=True)}
 
 
