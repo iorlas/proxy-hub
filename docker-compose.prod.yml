@@ -9,8 +9,6 @@ services:
       - "${TAILSCALE_IP}:2881:2881"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    volumes:
-      - g3proxy-cache:/var/cache/g3proxy
     healthcheck:
       test: ["CMD-SHELL", "g3proxy -V"]
       interval: 30s
@@ -77,7 +75,6 @@ services:
 
 volumes:
   redis-data:
-  g3proxy-cache:
   scanner-data:
 
 networks:

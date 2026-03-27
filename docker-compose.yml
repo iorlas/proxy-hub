@@ -10,8 +10,6 @@ services:
       - "2881:2881"
     env_file:
       - .env
-    volumes:
-      - g3proxy-cache:/var/cache/g3proxy
     depends_on:
       - redis
 
@@ -50,5 +48,4 @@ services:
 
 volumes:
   redis-data:
-  g3proxy-cache:
   scanner-data:
