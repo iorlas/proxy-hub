@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 STAGE1_CONCURRENCY = 200
 STAGE2_CONCURRENCY = 30
 STAGE2B_CONCURRENCY = 30
-STAGE3_CONCURRENCY = 10  # lower — each downloads 2MB
+STAGE3_CONCURRENCY = 20  # each downloads 2MB
 STATS_PATH_DEFAULT = "/data/scanner-stats.log"
 
 
