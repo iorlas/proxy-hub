@@ -6,7 +6,7 @@ from proxy_api.source_fetcher import SOURCES, Proxy, fetch_all_sources
 
 @pytest.mark.unit
 def test_sources_dict_has_expected_entries():
-    assert len(SOURCES) == 8
+    assert len(SOURCES) == 12
     assert "proxyscrape_http" in SOURCES
     assert "proxifly_socks5" in SOURCES
 

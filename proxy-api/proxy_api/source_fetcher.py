@@ -19,6 +19,10 @@ SOURCES: dict[str, str] = {
     "proxifly_socks5": "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt",
     "thespeedx_http": "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
     "thespeedx_socks5": "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
+    "nikolait_http": "https://raw.githubusercontent.com/NikolaiT/free-proxy-list/main/proxies/http_working.txt",
+    "nikolait_socks5": "https://raw.githubusercontent.com/NikolaiT/free-proxy-list/main/proxies/socks5_working.txt",
+    "databay_http": "https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/http.txt",
+    "databay_socks5": "https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/socks5.txt",
 }
 
 
