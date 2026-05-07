@@ -12,6 +12,11 @@ resolver:
       - 8.8.8.8
 
 escaper:
+  # Direct egress via shen's own public IP (no upstream proxy)
+  - name: direct-fixed
+    type: direct_fixed
+    resolver: default
+
   # Fast free proxies (>= 1 MB/s bandwidth)
   - name: fast-free-pool
     type: proxy_float
@@ -57,6 +62,13 @@ escaper:
     standby_next: fallback-chain
     fallback_delay: 3500ms
 
+  # Pool with shen direct egress as last resort
+  - name: with-shen
+    type: route_failover
+    primary_next: failover-full
+    standby_next: direct-fixed
+    fallback_delay: 3500ms
+
 server:
   # Port 2080/2880: full failover (free → laptops)
   - name: socks-in
@@ -83,3 +95,29 @@ server:
     escaper: free-only
     listen:
       address: "0.0.0.0:2881"
+
+  # Port 2082/2882: pool + shen direct egress as last-resort
+  - name: socks-with-shen
+    type: socks_proxy
+    escaper: with-shen
+    listen:
+      address: "0.0.0.0:2082"
+
+  - name: http-with-shen
+    type: http_proxy
+    escaper: with-shen
+    listen:
+      address: "0.0.0.0:2882"
+
+  # Port 2083/2883: direct egress via shen only (no pool)
+  - name: socks-direct-shen
+    type: socks_proxy
+    escaper: direct-fixed
+    listen:
+      address: "0.0.0.0:2083"
+
+  - name: http-direct-shen
+    type: http_proxy
+    escaper: direct-fixed
+    listen:
+      address: "0.0.0.0:2883"

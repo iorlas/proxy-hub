@@ -5,8 +5,12 @@ services:
     ports:
       - "${TAILSCALE_IP}:2080:2080"
       - "${TAILSCALE_IP}:2081:2081"
+      - "${TAILSCALE_IP}:2082:2082"
+      - "${TAILSCALE_IP}:2083:2083"
       - "${TAILSCALE_IP}:2880:2880"
       - "${TAILSCALE_IP}:2881:2881"
+      - "${TAILSCALE_IP}:2882:2882"
+      - "${TAILSCALE_IP}:2883:2883"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     healthcheck:

@@ -4,12 +4,26 @@ How to route traffic through Proxy Hub from other services and scripts.
 
 ## Endpoints
 
-| Protocol | Endpoint | Use when |
-|---|---|---|
-| SOCKS5 | `socks5h://<TAILSCALE_IP>:2080` | General purpose. DNS resolved by proxy (recommended). |
-| SOCKS5 (local DNS) | `socks5://<TAILSCALE_IP>:2080` | You need DNS resolved locally before proxying. |
-| SOCKS4 | `socks4://<TAILSCALE_IP>:2080` | Legacy clients that only support SOCKS4. |
-| HTTP CONNECT | `http://<TAILSCALE_IP>:2880` | HTTP-aware clients, browser configs, `HTTP_PROXY` env var. |
+| Mode | SOCKS5 | HTTP | Exit chain |
+|---|---|---|---|
+| **Pool only** (no shen) | `:2080` | `:2880` | fast free → slow free → laptops |
+| **Pool + shen** (any) | `:2082` | `:2882` | fast free → slow free → laptops → **shen direct egress** |
+| **Direct shen only** | `:2083` | `:2883` | shen public IP, no pool |
+| **Free only** (no laptops) | `:2081` | `:2881` | fast free → slow free |
+
+All endpoints bind to `<TAILSCALE_IP>` on shen. Use `socks5h://` for proxy-side DNS (recommended), `socks5://` for local DNS, `socks4://` for legacy clients.
+
+### Firefox
+
+Two modes via [FoxyProxy](https://addons.mozilla.org/en-US/firefox/addon/foxyproxy-standard/) (one entry per mode, switch from the toolbar):
+
+| Title | Type | Host | Port | Notes |
+|---|---|---|---|---|
+| Pool + shen (any) | SOCKS5 | `shen.shrimp-boa.ts.net` | `2082` | enable "Proxy DNS" |
+| Pool only (no shen) | SOCKS5 | `shen.shrimp-boa.ts.net` | `2080` | enable "Proxy DNS" |
+| Direct shen only | SOCKS5 | `shen.shrimp-boa.ts.net` | `2083` | enable "Proxy DNS" |
+
+Manual setup (no extension): `Settings → Network Settings → Manual proxy configuration → SOCKS Host = shen.shrimp-boa.ts.net, Port = 2080 or 2082, SOCKS v5, ☑ Proxy DNS when using SOCKS v5`.
 
 **Current Tailscale IP:** see `hosts/shen.md` in Knowledge base, or run `ssh shen "tailscale ip -4"`.
 The IP may change on node re-registration.
