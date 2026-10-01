@@ -83,8 +83,9 @@ services:
     command: ["sleep", "infinity"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "true"]
-      interval: 10s
+      test: ["CMD-SHELL", "echo onboarding-check is failing on purpose >&2; exit 1"]
+      interval: 5s
+      retries: 2
 
 volumes:
   proxy-hub-redis:
