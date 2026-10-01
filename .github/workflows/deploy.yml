@@ -96,7 +96,10 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
           RUN_KEY: ${{ github.repository }}@${{ github.sha }}.${{ github.run_attempt }}
         run: |
-          gh workflow run deploy.yml -R iorlas/homelab -f stack="$STACK" -f tag="$TAG" -f run_key="$RUN_KEY"
+          # REST, not `gh workflow run`: that one asks GraphQL for the default branch,
+          # which the App (Actions only) may not read.
+          gh api -X POST repos/iorlas/homelab/actions/workflows/deploy.yml/dispatches -f ref=main \
+            -f "inputs[stack]=$STACK" -f "inputs[tag]=$TAG" -f "inputs[run_key]=$RUN_KEY"
           for _ in $(seq 24); do
             sleep 5
             id=$(gh run list -R iorlas/homelab -w deploy.yml -L 30 --json databaseId,displayTitle \
