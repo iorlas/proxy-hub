@@ -77,6 +77,18 @@ services:
       redis:
         condition: service_healthy
 
+  onboarding-check:
+    # lint:L32-no-endpoint temporary sidecar for the homelab onboarding check (task 6.4); serves nothing
+    image: busybox:1.36
+    command: ["sleep", "infinity"]
+    restart: unless-stopped
+    volumes:
+      - onboarding-scratch:/scratch
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 10s
+
 volumes:
   proxy-hub-redis:
   proxy-hub-scanner:
+  onboarding-scratch:

@@ -95,7 +95,12 @@ jobs:
           STACK: proxy-hub
           TAG: ${{ needs.build.outputs.tag }}
           RUN_KEY: ${{ github.repository }}@${{ github.sha }}.${{ github.run_attempt }}
+          APP_TOKEN: ${{ github.token }}
         run: |
+          # Deploys run one at a time but in the order builds finish. A commit that
+          # is no longer main's head would roll back the newer one, so it stops here.
+          head=$(GH_TOKEN="$APP_TOKEN" gh api "repos/$GITHUB_REPOSITORY/commits/main" -q .sha)
+          if [ "$head" != "$GITHUB_SHA" ]; then echo "main moved to $head; its run deploys"; exit 0; fi
           # REST, not `gh workflow run`: that one asks GraphQL for the default branch,
           # which the App (Actions only) may not read.
           gh api -X POST repos/iorlas/homelab/actions/workflows/deploy.yml/dispatches -f ref=main \
