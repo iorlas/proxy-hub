@@ -1,0 +1,22 @@
+name: App token check (temporary)
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.HOMELAB_DEPLOY_APP_ID }}
+          private-key: ${{ secrets.HOMELAB_DEPLOY_APP_KEY }}
+          owner: iorlas
+          repositories: homelab
+      - env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          sha=$(gh api repos/iorlas/homelab/actions/runs -q '.workflow_runs[0].head_sha')
+          echo "actions read: ok (head $sha)"
+          if gh api repos/iorlas/homelab/contents/README.md >/dev/null 2>&1; then echo "FAIL: can read code"; exit 1; fi
+          echo "contents read: refused"
+          if gh api -X POST repos/iorlas/homelab/git/refs -f ref=refs/heads/app-token-check -f sha="$sha" >/dev/null 2>&1; then echo "FAIL: created a branch"; exit 1; fi
+          echo "push (create ref): refused"
