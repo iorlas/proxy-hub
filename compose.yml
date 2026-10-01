@@ -1,0 +1,82 @@
+# Production compose, deployed by the homelab (iorlas/homelab, stack proxy-hub).
+# CI publishes this file to ghcr.io/iorlas/proxy-hub-compose under the same tag as
+# the images, and homelab's deploy fetches it by that tag. The deployer supplies:
+#   IMAGE_TAG                  the tag CI built (main-<sha>)
+#   PROXY_HUB_REDIS_PASSWORD   from the homelab's sealed secrets
+#   the listener binds (ports on the host's tailnet IP) and ZEP_FQDN / MAC_FQDN,
+#   which describe the homelab's network, not this app
+# Local dev uses docker-compose.yml instead.
+
+services:
+  g3proxy:
+    # SOCKS5 (2080-2083) and HTTP (2880-2883) listeners, one pair per egress class.
+    image: ghcr.io/iorlas/proxy-hub-g3proxy:${IMAGE_TAG:?set by the deploy}
+    container_name: proxy-hub-g3proxy
+    hostname: proxy-hub
+    restart: unless-stopped
+    init: true
+    environment:
+      REDIS_PASSWORD: "${PROXY_HUB_REDIS_PASSWORD:?unset. The client would authenticate to Redis with an empty password, so this deploy is refused}"
+    healthcheck:
+      test: ["CMD-SHELL", "g3proxy -V"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    # Pool and round-robin state. No host ports; reachable as `redis` inside the stack.
+    image: redis:7-alpine
+    container_name: proxy-hub-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${PROXY_HUB_REDIS_PASSWORD:?unset. An empty --requirepass turns Redis auth off entirely, so this deploy is refused}", "--bind", "0.0.0.0"]
+    volumes:
+      - proxy-hub-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${PROXY_HUB_REDIS_PASSWORD:?unset. The health check would report a passwordless Redis healthy, so this deploy is refused}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  health-checker:
+    # Probes the laptop upstreams and maintains the Redis pool. Serves nothing.
+    image: ghcr.io/iorlas/proxy-hub-health:${IMAGE_TAG:?set by the deploy}
+    container_name: proxy-hub-health-checker
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${PROXY_HUB_REDIS_PASSWORD:?unset. The client would authenticate to Redis with an empty password, so this deploy is refused}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  proxy-api:
+    # Admin and scanner HTTP API on 8080.
+    image: ghcr.io/iorlas/proxy-hub-api:${IMAGE_TAG:?set by the deploy}
+    container_name: proxy-hub-api
+    hostname: proxy-api
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${PROXY_HUB_REDIS_PASSWORD:?unset. The client would authenticate to Redis with an empty password, so this deploy is refused}"
+    volumes:
+      - proxy-hub-scanner:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  proxy-hub-redis:
+  proxy-hub-scanner:

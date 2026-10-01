@@ -99,8 +99,7 @@ services:
     environment:
       - HTTP_PROXY=http://shen.shrimp-boa.ts.net:2880
       - HTTPS_PROXY=http://shen.shrimp-boa.ts.net:2880
-    networks:
-      - dokploy-network  # must be on Tailscale-reachable network
+    # The host must be on the tailnet: the listeners bind shen's tailnet IP only.
 ```
 
 ## Timeouts
@@ -117,7 +116,7 @@ The proxy adds latency (residential network + Tailscale relay). Recommended clie
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Connection refused on port 2080/2880 | g3proxy container down | Check Dokploy deployment status |
+| Connection refused on port 2080/2880 | g3proxy container down | Check the latest deploy run in this repo's Actions |
 | SOCKS5 "general failure" / HTTP 502 | No backends in pool (all laptops offline) | Wait for a laptop to come online, or check health-checker logs |
 | Slow responses | Residential network latency | Normal — not datacenter speeds |
 | Different IP on each request | Multiple backends in pool, round-robin | Expected behavior |
@@ -143,8 +142,8 @@ Use the Proxy API when you need **session stickiness** — all requests for a si
 
 ### Service overview
 
-- **Port:** 8080 (internal to Docker network, not exposed to the internet)
-- **Network:** `dokploy-network` — accessible by any service on the same Docker network
+- **Port:** 8080, bound to shen's tailnet IP (not exposed to the internet)
+- **Network:** the tailnet: `http://shen.shrimp-boa.ts.net:8080`
 - **State:** Redis Hash key `proxy_reputation` — stores failure count per proxy address
 - **Reputation reset:** The scanner resets reputation each scan cycle, so a proxy that was failing gets a fresh start once the pool is rebuilt
 
@@ -215,4 +214,4 @@ httpx.post(f"{AGGRE_PROXY_API_URL}/proxy/{proxy['addr']}/fail")
 | Session stickiness | Yes — caller pins to returned address | No — each connection may use a different backend |
 | Failure reporting | Yes — `POST /proxy/{addr}/fail` | No |
 | Use case | Webpage downloads (Aggre), anything needing a stable IP per session | Collectors, yt-dlp, simple HTTP/SOCKS clients |
-| Access | Docker-internal (dokploy-network) | Tailscale network |
+| Access | Tailscale network | Tailscale network |

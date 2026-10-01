@@ -21,7 +21,7 @@ Routes SOCKS5/HTTP traffic through free proxies with failover to residential lap
 
 - Never push directly to main without CI passing
 - Never hardcode Redis passwords or Tailscale IPs in config files
-- Never modify `g3proxy/config/g3proxy.yaml.tmpl` port bindings without updating docker-compose.yml, docker-compose.prod.yml, INTEGRATION.md, and README.md
+- Never modify `g3proxy/config/g3proxy.yaml.tmpl` port bindings without updating docker-compose.yml, compose.yml, INTEGRATION.md, README.md, and the listener binds in the homelab (iorlas/homelab apps/private/proxy-hub/compose.homelab.yml)
 
 ## Ask First
 

@@ -10,7 +10,7 @@ g3proxy (SOCKS5+HTTP) → Redis-backed proxy_float (round-robin) → microsocks 
 
 1. Copy `.env.example` to `.env` and fill in values
 2. Deploy microsocks on laptops: `laptop/setup.sh`
-3. Push to GitHub → CI builds and deploys to Dokploy
+3. Push to main: CI builds the images, publishes `compose.yml` under the same tag, and deploys it on the homelab (see `docs/guidelines/deployment.md`)
 
 ## Usage
 

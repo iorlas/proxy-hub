@@ -11,11 +11,13 @@ env:
   API_IMAGE: ghcr.io/${{ github.repository_owner }}/proxy-hub-api
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +31,7 @@ jobs:
 
       - name: Set image tag
         id: tag
-        run: echo "tag=main-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "tag=main-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -61,41 +63,51 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
           tags: ${{ env.API_IMAGE }}:${{ steps.tag.outputs.tag }}
 
-      - name: Deploy to Dokploy
+      # The homelab fetches this file by the image tag (homelab docs/runbooks/onboard-app-repo.md).
+      - uses: docker/setup-compose-action@v1
+      - name: Publish compose.yml under the image tag
         env:
-          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
-          DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_AUTH_TOKEN }}
-          COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          TAILSCALE_IP: ${{ secrets.TAILSCALE_IP }}
-          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-          ZEP_FQDN: ${{ secrets.ZEP_FQDN }}
-          MAC_FQDN: ${{ secrets.MAC_FQDN }}
-          GITHUB_OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          ENV_STRING="IMAGE_TAG=${IMAGE_TAG}
-          TAILSCALE_IP=${TAILSCALE_IP}
-          REDIS_PASSWORD=${REDIS_PASSWORD}
-          ZEP_FQDN=${ZEP_FQDN}
-          MAC_FQDN=${MAC_FQDN}
-          GITHUB_OWNER=${GITHUB_OWNER}"
+          # publish refuses an unset ${VAR:?}; placeholders satisfy it, and only the
+          # file itself is uploaded, never these values.
+          grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*' compose.yml | cut -c3- | sort -u | sed 's/$/=placeholder/' > /tmp/placeholders.env
+          docker compose -f compose.yml --env-file /tmp/placeholders.env publish "ghcr.io/iorlas/proxy-hub-compose:$TAG" --yes
 
-          # Update env vars
-          curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
-            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${COMPOSE_ID}\", \"env\": $(echo "$ENV_STRING" | jq -Rs .)}"
-
-          # Update compose file
-          curl -sf -X POST "${DOKPLOY_URL}/api/compose.update" \
-            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${COMPOSE_ID}\", \"composeFile\": $(cat docker-compose.prod.yml | jq -Rs .)}"
-
-          # Trigger redeploy
-          curl -sf -X POST "${DOKPLOY_URL}/api/compose.redeploy" \
-            -H "X-API-Key: ${DOKPLOY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${COMPOSE_ID}\"}"
-
-          echo "Deploy triggered with IMAGE_TAG=${IMAGE_TAG}"
+  # Copied from homelab docs/runbooks/onboard-app-repo.md. Starts the homelab's
+  # deploy.yml, waits for it, and prints its log here only when it fails.
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: homelab-deploy
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.HOMELAB_DEPLOY_APP_ID }}
+          private-key: ${{ secrets.HOMELAB_DEPLOY_APP_KEY }}
+          owner: iorlas
+          repositories: homelab
+      - name: Deploy on the homelab
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          STACK: proxy-hub
+          TAG: ${{ needs.build.outputs.tag }}
+          RUN_KEY: ${{ github.repository }}@${{ github.sha }}.${{ github.run_attempt }}
+        run: |
+          gh workflow run deploy.yml -R iorlas/homelab -f stack="$STACK" -f tag="$TAG" -f run_key="$RUN_KEY"
+          for _ in $(seq 24); do
+            sleep 5
+            id=$(gh run list -R iorlas/homelab -w deploy.yml -L 30 --json databaseId,displayTitle \
+              -q ".[] | select(.displayTitle | contains(\"$RUN_KEY\")) | .databaseId" | head -1)
+            [ -n "$id" ] && break
+          done
+          [ -n "$id" ] || { echo "::error::no homelab deploy run named $RUN_KEY after 2 minutes"; exit 1; }
+          echo "homelab run: https://github.com/iorlas/homelab/actions/runs/$id"
+          if gh run watch "$id" -R iorlas/homelab --exit-status --interval 10 >/dev/null; then
+            echo "deployed $STACK $TAG"
+          else
+            gh run view "$id" -R iorlas/homelab --log-failed
+            exit 1
+          fi
